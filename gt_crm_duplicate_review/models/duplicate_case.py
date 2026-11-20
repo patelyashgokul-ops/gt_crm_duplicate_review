@@ -153,7 +153,13 @@ class DuplicateCase(models.Model):
         if not self.env.su and not bypass_access:
             leads = self.env['crm.lead']
             readable = leads._search([])
-            domain = Domain(domain) & Domain('lead_a_id', 'in', readable) & Domain('lead_b_id', 'in', readable)
+            visible_pair = (
+                Domain('lead_a_id', 'in', readable) & Domain('lead_b_id', 'in', readable)
+            ) | (
+                Domain('status', '=', 'merged') & Domain('lead_a_id', 'in', readable)
+                & Domain('lead_b_id', '=', False)
+            )
+            domain = Domain(domain) & visible_pair
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
 
     def _check_source_access(self):
@@ -227,24 +233,7 @@ class DuplicateCase(models.Model):
         return self._open_source('lead_b_id')
 
     def action_refresh_evidence(self):
-        self.ensure_one()
-        if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
-            raise AccessError(self.env._('Only Duplicate Review Managers may refresh matching evidence.'))
-        self._check_source_access()
-        a, b = self.lead_a_id, self.lead_b_id
-        result = evaluate_pair(a, b) if a.exists() and b.exists() else False
-        if not result:
-            self.sudo().write({'source_fingerprint': 'stale', 'last_evaluated': fields.Datetime.now()})
-            return self._scan_notice(self.env._('No actionable match remains. This case is now stale.'), 'warning')
-        self.sudo().write({
-            'match_type': result['match_type'], 'match_score': result['match_score'],
-            'confidence_band': result['confidence_band'], 'matched_signals': result['matched_signals'],
-            'conflict_indicators': result['conflict_indicators'], 'shared_contact': result['shared_contact'],
-            'match_explanation': '; '.join(result['matched_signals']),
-            'source_fingerprint': self._fingerprint(a.id, b.id, result['match_type'], result['fingerprint_key']),
-            'last_evaluated': fields.Datetime.now(),
-        })
-        return self._scan_notice(self.env._('Matching evidence has been refreshed.'))
+        return self.action_recheck()
 
     @api.model
     def action_scan(self):
@@ -332,12 +321,23 @@ class DuplicateCase(models.Model):
                     'match_explanation': '; '.join(evaluated['matched_signals']), 'source_fingerprint': digest,
                     'last_evaluated': fields.Datetime.now(),
                 }
-                case = self.sudo().search([('company_id', '=', lead.company_id.id), ('lead_a_id', '=', a), ('lead_b_id', '=', b)], limit=1)
+                case = self.sudo().search([('company_id', '=', lead.company_id.id), ('lead_a_original_id', '=', a), ('lead_b_original_id', '=', b)], limit=1)
                 if case:
-                    if case.status == 'stale':
-                        case.write(values)
-                    else:
-                        case.write(values)
+                    old_status = case.status
+                    old_fingerprint = case.source_fingerprint
+                    if old_status in ('pending', 'stale'):
+                        values['status'] = 'pending'
+                    elif old_status == 'not_duplicate' and old_fingerprint != digest:
+                        values.update({'status': 'pending', 'review_reason': False})
+                        case._append_event('reopened', old_status, 'pending', self.env._('Matching data changed during scan.'), digest)
+                    elif old_status == 'merge_approved':
+                        approval_digest = case._approval_digest(lead, other)
+                        if approval_digest != case.approval_fingerprint:
+                            values['status'] = 'stale'
+                            case._append_event('approval_invalidated', old_status, 'stale', self.env._('Source data changed after approval.'), digest, approval_digest)
+                    elif old_status in ('merged', 'invalid'):
+                        continue
+                    case.write(values)
                 else:
                     values.update({'company_id': lead.company_id.id, 'lead_a_id': a, 'lead_b_id': b})
                     self.sudo().create(values)
