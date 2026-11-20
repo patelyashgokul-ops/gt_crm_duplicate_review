@@ -9,6 +9,7 @@ KEYS = ('gt_review_email_key', 'gt_review_phone_key', 'gt_review_mobile_key')
 GROUP_LIMIT = 100
 DEFAULT_BATCH_SIZE = 50
 MAX_BATCH_SIZE = 200
+SCAN_LOCK_NAMESPACE = 67209120
 
 
 class DuplicateCase(models.Model):
@@ -23,7 +24,11 @@ class DuplicateCase(models.Model):
     match_type = fields.Selection([('email', 'Email'), ('phone', 'Phone')], required=True)
     match_score = fields.Integer(default=100, required=True)
     match_explanation = fields.Char(required=True)
-    status = fields.Selection([('pending', 'Pending')], required=True, default='pending')
+    status = fields.Selection(
+        [('pending', 'Pending'), ('stale', 'Stale')],
+        compute='_compute_status', store=True,
+    )
+    evidence_current = fields.Boolean(compute='_compute_evidence_current', store=True)
     reviewer_id = fields.Many2one('res.users')
     reviewed_at = fields.Datetime()
     decision_reason = fields.Text()
@@ -31,6 +36,43 @@ class DuplicateCase(models.Model):
 
     _unique_pair = models.Constraint('unique(company_id, lead_a_id, lead_b_id)', 'This candidate pair already exists.')
     _ordered_pair = models.Constraint('check(lead_a_id < lead_b_id)', 'Candidate pairs must contain two distinct leads in canonical order.')
+
+    @api.depends(
+        'company_id', 'lead_a_id', 'lead_b_id', 'match_type', 'source_fingerprint',
+        'lead_a_id.company_id', 'lead_b_id.company_id',
+        'lead_a_id.active', 'lead_b_id.active',
+        'lead_a_id.gt_review_email_key', 'lead_b_id.gt_review_email_key',
+        'lead_a_id.gt_review_phone_key', 'lead_b_id.gt_review_phone_key',
+        'lead_a_id.gt_review_mobile_key', 'lead_b_id.gt_review_mobile_key',
+    )
+    def _compute_evidence_current(self):
+        for case in self:
+            a, b = case.lead_a_id, case.lead_b_id
+            current = bool(
+                a and b and a.active and b.active and case.company_id
+                and a.company_id == case.company_id and b.company_id == case.company_id
+            )
+            if current and case.match_type == 'email':
+                keys = {a.gt_review_email_key} & {b.gt_review_email_key}
+            elif current and case.match_type == 'phone':
+                keys = {a.gt_review_phone_key, a.gt_review_mobile_key} & {
+                    b.gt_review_phone_key, b.gt_review_mobile_key,
+                }
+            else:
+                keys = set()
+            case.evidence_current = any(
+                key and case.source_fingerprint == self._fingerprint(a.id, b.id, case.match_type, key)
+                for key in keys
+            )
+
+    @api.depends('evidence_current')
+    def _compute_status(self):
+        for case in self:
+            case.status = 'pending' if case.evidence_current else 'stale'
+
+    @api.model
+    def _fingerprint(self, a_id, b_id, kind, key):
+        return hashlib.sha256(f'{a_id}:{b_id}:{kind}:{key}'.encode()).hexdigest()
 
     @api.constrains('company_id', 'lead_a_id', 'lead_b_id')
     def _check_pair_company(self):
@@ -80,6 +122,12 @@ class DuplicateCase(models.Model):
         if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
             raise AccessError(self.env._('Only Duplicate Review Managers may scan.'))
         company = self.env.company
+        self.env.cr.execute(
+            'SELECT pg_try_advisory_xact_lock(%s, %s)',
+            (SCAN_LOCK_NAMESPACE, company.id),
+        )
+        if not self.env.cr.fetchone()[0]:
+            raise ValidationError(self.env._('A duplicate scan is already running for this company.'))
         cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', company.id)], limit=1)
         if not cursor:
             cursor = self.env['gt.crm.duplicate.scan'].sudo().create({'company_id': company.id})
@@ -120,10 +168,16 @@ class DuplicateCase(models.Model):
                 for other in matches:
                     a, b = sorted((lead.id, other.id))
                     case = self.sudo().search([('company_id', '=', lead.company_id.id), ('lead_a_id', '=', a), ('lead_b_id', '=', b)], limit=1)
-                    if case:
-                        continue
                     kind = 'email' if field == 'gt_review_email_key' else 'phone'
-                    digest = hashlib.sha256(('%s:%s:%s:%s' % (a, b, kind, key)).encode()).hexdigest()
+                    digest = self._fingerprint(a, b, kind, key)
+                    if case:
+                        if not case.evidence_current:
+                            case.write({
+                                'match_type': kind,
+                                'match_explanation': self.env._('Exact normalized %s match', kind),
+                                'source_fingerprint': digest,
+                            })
+                        continue
                     self.sudo().create({
                         'company_id': lead.company_id.id, 'lead_a_id': a, 'lead_b_id': b,
                         'match_type': kind, 'match_explanation': self.env._('Exact normalized %s match', kind),

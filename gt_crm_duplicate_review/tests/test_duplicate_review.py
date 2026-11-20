@@ -1,7 +1,9 @@
 from odoo.tests import tagged, TransactionCase
 from odoo.exceptions import AccessError
+from unittest.mock import patch
 
 from ..models.normalization import normalize_email, normalize_phone
+from ..models import duplicate_case
 
 
 @tagged('post_install', '-at_install')
@@ -110,3 +112,50 @@ class TestDuplicateReview(TransactionCase):
         except RuntimeError:
             pass
         self.assertFalse(self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)]))
+
+    def test_evidence_becomes_stale_and_recovers(self):
+        first = self._lead(email_from='original@example.com')
+        second = self._lead(email_from='original@example.com')
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
+        self.assertEqual(case.status, 'pending')
+        second.email_from = 'changed@example.com'
+        self.assertEqual(case.status, 'stale')
+        first.email_from = 'changed@example.com'
+        self.assertEqual(case.status, 'stale')
+        self.Case.with_user(self.manager).action_scan()  # reach the end of the prior pass
+        self.Case.with_user(self.manager).action_scan()  # refresh evidence on a new pass
+        self.assertEqual(case.status, 'pending')
+        second.active = False
+        self.assertEqual(case.status, 'stale')
+
+    def test_company_move_invalidates_evidence(self):
+        first = self._lead(email_from='move@example.com')
+        second = self._lead(email_from='move@example.com')
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
+        other_company = self.env['res.company'].create({'name': 'Moved Lead Company'})
+        second.company_id = other_company
+        self.assertEqual(case.status, 'stale')
+
+    def test_large_group_pauses_without_claiming_completion(self):
+        leads = [self._lead(email_from='group@example.com') for _ in range(4)]
+        with patch.object(duplicate_case, 'GROUP_LIMIT', 2):
+            self.assertFalse(self.Case.with_user(self.manager).action_scan())
+        cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)])
+        self.assertEqual(cursor.state, 'blocked')
+        self.assertEqual(cursor.blocked_lead_id, leads[-1].id)
+        self.assertEqual(cursor.last_lead_id, leads[-2].id)
+        self.assertEqual(self.Case.search_count([]), 3)
+
+    def test_concurrent_scan_lock(self):
+        self._lead(email_from='lock@example.com')
+        with self.env.registry.cursor() as other_cursor:
+            other_cursor.execute(
+                'SELECT pg_try_advisory_xact_lock(%s, %s)',
+                (duplicate_case.SCAN_LOCK_NAMESPACE, self.company.id),
+            )
+            self.assertTrue(other_cursor.fetchone()[0])
+            with self.assertRaisesRegex(Exception, 'already running'):
+                self.Case.with_user(self.manager).action_scan()
+        self.assertFalse(self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)]))

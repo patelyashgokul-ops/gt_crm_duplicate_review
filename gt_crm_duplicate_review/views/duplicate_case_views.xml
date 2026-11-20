@@ -10,6 +10,7 @@
                 <field name="match_type"/>
                 <field name="match_score"/>
                 <field name="status"/>
+                <field name="evidence_current"/>
             </list>
         </field>
     </record>
@@ -28,6 +29,7 @@
                         <field name="match_score"/>
                         <field name="match_explanation"/>
                         <field name="source_fingerprint"/>
+                        <field name="evidence_current"/>
                     </group>
                 </sheet>
             </form>
