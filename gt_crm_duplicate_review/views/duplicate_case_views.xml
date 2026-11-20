@@ -57,8 +57,8 @@
                     </div>
                     <group string="Match Summary">
                         <field name="company_id"/><field name="match_type"/><field name="match_score" string="Match Score / 100"/>
-                        <field name="matched_signals"/><field name="shared_contact"/><field name="match_explanation"/>
-                        <field name="last_evaluated"/><field name="evidence_current"/><field name="conflict_indicators"/>
+                        <field name="matched_signals_summary"/><field name="shared_contact"/><field name="match_explanation"/>
+                        <field name="last_evaluated"/><field name="evidence_current"/><field name="conflict_summary"/>
                     </group>
                     <separator string="Side-by-side CRM comparison"/>
                     <group col="2">

@@ -29,7 +29,9 @@ class DuplicateCase(models.Model):
     match_score = fields.Integer(required=True)
     confidence_band = fields.Selection([('strong', 'Strong Match'), ('review', 'Review Required'), ('possible', 'Possible Match')], required=True, default='review')
     matched_signals = fields.Json(default=lambda self: [])
+    matched_signals_summary = fields.Text(compute='_compute_evidence_summaries')
     conflict_indicators = fields.Json(default=lambda self: [])
+    conflict_summary = fields.Text(compute='_compute_evidence_summaries')
     conflict_count = fields.Integer(compute='_compute_conflict_count')
     shared_contact = fields.Boolean()
     last_evaluated = fields.Datetime()
@@ -114,6 +116,12 @@ class DuplicateCase(models.Model):
     def _compute_conflict_count(self):
         for case in self:
             case.conflict_count = len(case.conflict_indicators or [])
+
+    @api.depends('matched_signals', 'conflict_indicators')
+    def _compute_evidence_summaries(self):
+        for case in self:
+            case.matched_signals_summary = '\n'.join(f'• {signal}' for signal in case.matched_signals or [])
+            case.conflict_summary = '\n'.join(f'• {conflict}' for conflict in case.conflict_indicators or [])
 
     @api.model
     def _fingerprint(self, a_id, b_id, kind, key):
