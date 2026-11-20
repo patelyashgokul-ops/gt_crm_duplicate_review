@@ -184,6 +184,22 @@ class TestDuplicateReview(TransactionCase):
         with self.assertRaises(AccessError):
             self.env['gt.crm.duplicate.review.wizard'].with_user(ordinary_user).create({'case_id': case.id})
 
+    def test_p3_wizards_accept_action_context_case_default_with_access_checks(self):
+        a = self._lead(email_from='context-wizard@example.test')
+        b = self._lead(email_from='context-wizard@example.test')
+        case = self._candidate_case(a, b)
+        wizard = self.env['gt.crm.duplicate.review.wizard'].with_user(self.manager).with_context(
+            default_case_id=case.id,
+        ).create({})
+        self.assertEqual(wizard.case_id, case)
+
+        case.with_user(self.manager)._approve_merge('Browser confirmation context regression test.')
+        confirmation = self.env['gt.crm.duplicate.merge.confirm.wizard'].with_user(self.manager).with_context(
+            default_case_id=case.id,
+        ).create({})
+        self.assertEqual(confirmation.case_id, case)
+
+
     def test_p3_upgrade_migration_backfills_populated_case_history(self):
         a = self._lead(email_from='migration@example.test')
         b = self._lead(email_from='migration@example.test')

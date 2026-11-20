@@ -12,6 +12,17 @@ _logger = logging.getLogger(__name__)
 MANAGER_GROUP = 'gt_crm_duplicate_review.group_duplicate_review_manager'
 
 
+def _check_wizard_case_access(env, vals):
+    """Resolve the form's default case without elevating its access checks."""
+    case_id = vals.get('case_id') or env.context.get('default_case_id')
+    case = env['gt.crm.duplicate.case'].browse(case_id).exists()
+    if not case:
+        raise AccessError(_('This duplicate case is not available.'))
+    case.check_access('read')
+    case._check_source_access()
+    return case
+
+
 class DuplicateEvent(models.Model):
     _name = 'gt.crm.duplicate.event'
     _description = 'CRM Duplicate Review Audit Event'
@@ -428,11 +439,7 @@ class DuplicateReviewWizard(models.TransientModel):
         if not self.env.user.has_group(MANAGER_GROUP):
             raise AccessError(_('Only Duplicate Review Managers may create review wizards.'))
         for vals in vals_list:
-            case = self.env['gt.crm.duplicate.case'].browse(vals.get('case_id')).exists()
-            if not case:
-                raise AccessError(_('This duplicate case is not available.'))
-            case.check_access('read')
-            case._check_source_access()
+            _check_wizard_case_access(self.env, vals)
         return super().create(vals_list)
 
     def write(self, vals):
@@ -478,11 +485,7 @@ class DuplicateMergeConfirmWizard(models.TransientModel):
         if not self.env.user.has_group(MANAGER_GROUP):
             raise AccessError(_('Only Duplicate Review Managers may create merge confirmations.'))
         for vals in vals_list:
-            case = self.env['gt.crm.duplicate.case'].browse(vals.get('case_id')).exists()
-            if not case:
-                raise AccessError(_('This duplicate case is not available.'))
-            case.check_access('read')
-            case._check_source_access()
+            _check_wizard_case_access(self.env, vals)
         return super().create(vals_list)
 
     def write(self, vals):
