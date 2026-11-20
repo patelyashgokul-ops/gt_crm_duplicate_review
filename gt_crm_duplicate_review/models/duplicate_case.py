@@ -46,6 +46,21 @@ class DuplicateCase(models.Model):
             domain = Domain(domain) & Domain('lead_a_id', 'in', readable) & Domain('lead_b_id', 'in', readable)
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
 
+    def _check_source_access(self):
+        if self and not self.env.su:
+            source_ids = set(self.mapped('lead_a_id').ids + self.mapped('lead_b_id').ids)
+            readable_ids = set(self.env['crm.lead'].search([('id', 'in', list(source_ids))]).ids)
+            if source_ids != readable_ids:
+                raise AccessError(self.env._('Both source CRM records must be readable to view a case.'))
+
+    def read(self, fields=None, load='_classic_read'):
+        self._check_source_access()
+        return super().read(fields=fields, load=load)
+
+    def web_read(self, specification):
+        self._check_source_access()
+        return super().web_read(specification)
+
     @api.model_create_multi
     def create(self, vals_list):
         if not self.env.su:

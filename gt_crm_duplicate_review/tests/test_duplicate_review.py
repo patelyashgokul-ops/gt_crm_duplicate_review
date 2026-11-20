@@ -97,6 +97,8 @@ class TestDuplicateReview(TransactionCase):
         self.assertEqual(self.Case.with_user(user).search_count([('id', '=', case.id)]), 0)
         with self.assertRaises(AccessError):
             case.with_user(user).read(['match_explanation'])
+        with self.assertRaises(AccessError):
+            case.with_user(user).web_read({'id': {}})
 
     def test_scan_rollback(self):
         first = self._lead(email_from='rollback@example.com')
