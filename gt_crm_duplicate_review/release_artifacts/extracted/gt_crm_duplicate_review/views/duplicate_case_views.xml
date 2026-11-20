@@ -1,0 +1,121 @@
+<odoo>
+    <record id="view_duplicate_case_list" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.case.list</field>
+        <field name="model">gt.crm.duplicate.case</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" delete="0">
+                <field name="confidence_band"/>
+                <field name="company_id"/>
+                <field name="lead_a_id"/>
+                <field name="lead_b_id"/>
+                <field name="match_type"/>
+                <field name="match_score"/>
+                <field name="last_evaluated"/>
+                <field name="reviewer_id" optional="hide"/>
+                <field name="conflict_count"/>
+                <field name="status" decoration-danger="status == 'stale'" decoration-success="confidence_band == 'strong'"/>
+                <field name="evidence_current"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_duplicate_case_search" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.case.search</field>
+        <field name="model">gt.crm.duplicate.case</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="lead_a_id"/><field name="lead_b_id"/><field name="match_type"/>
+                <filter name="strong" string="Strong Matches" domain="[('confidence_band','=','strong')]"/>
+                <filter name="review" string="Review Required" domain="[('confidence_band','=','review')]"/>
+                <filter name="possible" string="Possible Matches" domain="[('confidence_band','=','possible')]"/>
+                <filter name="exact_email" string="Exact Email" domain="[('match_type','in',['email_exact','email_phone'])]"/>
+                <filter name="exact_phone" string="Exact Phone" domain="[('match_type','in',['phone_exact','email_phone'])]"/>
+                <filter name="conflicts" string="With Conflicts" domain="[('conflict_indicators','!=',False)]"/>
+                <filter name="stale" string="Stale" domain="[('status','=','stale')]"/>
+                <filter name="pending" string="Pending Review" domain="[('status','=','pending')]"/>
+                <filter name="archived" string="Archived Sources" domain="['|',('lead_a_id.active','=',False),('lead_b_id.active','=',False)]"/>
+                <separator/>
+                <filter name="group_class" string="Group by Classification" context="{'group_by':'confidence_band'}"/>
+                <filter name="group_status" string="Group by Status" context="{'group_by':'status'}"/>
+                <filter name="group_company" string="Group by Company" context="{'group_by':'company_id'}"/>
+                <filter name="group_reviewer" string="Group by Reviewer" context="{'group_by':'reviewer_id'}"/>
+                <filter name="group_salesperson" string="Group by Salesperson" context="{'group_by':'lead_a_user_id'}"/>
+                <filter name="group_team" string="Group by Sales Team" context="{'group_by':'lead_a_team_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="view_duplicate_case_form" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.case.form</field>
+        <field name="model">gt.crm.duplicate.case</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0">
+                <header><field name="status" widget="statusbar"/><field name="confidence_band" widget="badge"/></header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_lead_a" type="object" string="Open Record A" class="oe_stat_button" icon="fa-external-link"/>
+                        <button name="action_open_lead_b" type="object" string="Open Record B" class="oe_stat_button" icon="fa-external-link" invisible="not lead_b_id"/>
+                        <button name="action_recheck" type="object" string="Recheck Evidence" class="oe_stat_button" icon="fa-refresh" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status in ['merged', 'invalid']"/>
+                        <button name="action_open_review_wizard" type="object" string="Review Decision" class="oe_stat_button" icon="fa-check-square-o" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status not in ['pending', 'stale']"/>
+                        <button name="action_open_review_wizard" type="object" string="Review Approval" class="oe_stat_button" icon="fa-undo" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status != 'merge_approved'"/>
+                        <button name="action_open_merge_confirmation" type="object" string="Execute Approved Merge" class="oe_stat_button" icon="fa-exclamation-triangle" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status != 'merge_approved'"/>
+                    </div>
+                    <group string="Match Summary">
+                        <field name="company_id"/><field name="match_type"/><field name="match_score" string="Match Score / 100"/>
+                        <field name="lead_a_original_id" string="Original Record A ID"/><field name="lead_a_original_type"/>
+                        <field name="lead_b_original_id" string="Original Record B ID"/><field name="lead_b_original_type"/>
+                        <field name="matched_signals_summary"/><field name="shared_contact"/><field name="match_explanation"/>
+                        <field name="last_evaluated"/><field name="evidence_current"/><field name="conflict_summary"/>
+                        <field name="reviewer_id"/><field name="review_reason"/><field name="approved_by_id"/><field name="approved_at"/><field name="approval_reason"/>
+                        <field name="merge_survivor_id"/><field name="merged_at"/><field name="merged_by_id"/>
+                    </group>
+                    <separator string="Review History"/>
+                    <field name="event_ids" nolabel="1" readonly="1">
+                        <list create="0" edit="0" delete="0"><field name="event_at"/><field name="event_type"/><field name="actor_id"/><field name="previous_status"/><field name="new_status"/><field name="reason"/><field name="survivor_id"/></list>
+                    </field>
+                    <separator string="Side-by-side CRM comparison"/>
+                    <group col="2">
+                        <group string="Record A">
+                            <field name="lead_a_id"/>
+                            <field name="lead_a_name"/><field name="lead_a_contact_name"/><field name="lead_a_partner_id"/>
+                            <field name="lead_a_email"/><field name="lead_a_phone"/><field name="lead_a_mobile"/>
+                            <field name="lead_a_user_id"/><field name="lead_a_team_id"/><field name="lead_a_stage_id"/>
+                            <field name="lead_a_revenue"/><field name="lead_a_probability"/><field name="lead_a_priority"/>
+                            <field name="lead_a_type"/><field name="lead_a_active"/><field name="lead_a_create_date"/><field name="lead_a_write_date"/>
+                        </group>
+                        <group string="Record B">
+                            <field name="lead_b_id"/>
+                            <field name="lead_b_name"/><field name="lead_b_contact_name"/><field name="lead_b_partner_id"/>
+                            <field name="lead_b_email"/><field name="lead_b_phone"/><field name="lead_b_mobile"/>
+                            <field name="lead_b_user_id"/><field name="lead_b_team_id"/><field name="lead_b_stage_id"/>
+                            <field name="lead_b_revenue"/><field name="lead_b_probability"/><field name="lead_b_priority"/>
+                            <field name="lead_b_type"/><field name="lead_b_active"/><field name="lead_b_create_date"/><field name="lead_b_write_date"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">A match score ranks similarity. It is not a probability or a confirmed duplicate.</div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_duplicate_case" model="ir.actions.act_window">
+        <field name="name">All Duplicate Cases</field>
+        <field name="res_model">gt.crm.duplicate.case</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_duplicate_case_search"/>
+    </record>
+    <record id="action_duplicate_queue" model="ir.actions.act_window">
+        <field name="name">Review Queue</field>
+        <field name="res_model">gt.crm.duplicate.case</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_duplicate_case_search"/>
+        <field name="domain">[('status','=','pending')]</field>
+    </record>
+    <record id="action_duplicate_scan" model="ir.actions.server">
+        <field name="name">Scan CRM Duplicates</field>
+        <field name="model_id" ref="model_gt_crm_duplicate_case"/>
+        <field name="state">code</field>
+        <field name="code">action = env['gt.crm.duplicate.case'].action_scan()</field>
+    </record>
+    <menuitem id="menu_duplicate_review" name="Duplicate Review" parent="crm.crm_menu_root" sequence="30" groups="group_duplicate_review_user"/>
+    <menuitem id="menu_duplicate_queue" name="Review Queue" parent="menu_duplicate_review" action="action_duplicate_queue" sequence="10"/>
+    <menuitem id="menu_duplicate_cases" name="All Duplicate Cases" parent="menu_duplicate_review" action="action_duplicate_case" sequence="20"/>
+    <menuitem id="menu_duplicate_scan" name="Scan CRM Duplicates" parent="menu_duplicate_review" action="action_duplicate_scan" sequence="30" groups="group_duplicate_review_manager"/>
+</odoo>

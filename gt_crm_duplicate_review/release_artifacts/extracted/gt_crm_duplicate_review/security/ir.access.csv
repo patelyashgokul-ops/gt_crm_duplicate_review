@@ -1,0 +1,11 @@
+id,name,model_id,group_id/id,operation,domain
+access_duplicate_case_user,Duplicate Review User,gt.crm.duplicate.case,gt_crm_duplicate_review.group_duplicate_review_user,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_case_manager,Duplicate Review Manager,gt.crm.duplicate.case,gt_crm_duplicate_review.group_duplicate_review_manager,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_event_user,Duplicate Review User Event,gt.crm.duplicate.event,gt_crm_duplicate_review.group_duplicate_review_user,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_event_manager,Duplicate Review Manager Event,gt.crm.duplicate.event,gt_crm_duplicate_review.group_duplicate_review_manager,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_review_wizard_manager,Duplicate Review Wizard,gt.crm.duplicate.review.wizard,gt_crm_duplicate_review.group_duplicate_review_manager,cru,
+access_duplicate_merge_wizard_manager,Duplicate Merge Wizard,gt.crm.duplicate.merge.confirm.wizard,gt_crm_duplicate_review.group_duplicate_review_manager,cru,
+access_duplicate_scan_user,Duplicate Review Scan Progress User,gt.crm.duplicate.scan,gt_crm_duplicate_review.group_duplicate_review_user,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_scan_manager,Duplicate Review Scan Progress Manager,gt.crm.duplicate.scan,gt_crm_duplicate_review.group_duplicate_review_manager,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_dashboard_user,Duplicate Review Dashboard User,gt.crm.duplicate.dashboard,gt_crm_duplicate_review.group_duplicate_review_user,cr,
+access_duplicate_dashboard_manager,Duplicate Review Dashboard Manager,gt.crm.duplicate.dashboard,gt_crm_duplicate_review.group_duplicate_review_manager,cr,
