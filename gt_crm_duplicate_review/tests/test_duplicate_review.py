@@ -126,6 +126,8 @@ class TestDuplicateReview(TransactionCase):
         case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
         self.assertEqual(len(case), 1)
         self.assertEqual(case.match_type, 'phone_exact')
+        self.assertEqual(case.match_score, 80)
+        self.assertEqual(case.confidence_band, 'review')
         self.assertLess(case.lead_a_id.id, case.lead_b_id.id)
 
     def test_restricted_crm_user_cannot_see_case(self):
@@ -243,6 +245,14 @@ class TestDuplicateReview(TransactionCase):
         self.assertTrue(case)
         second.unlink()
         self.assertFalse(self.Case.search([('id', '=', case.id)]))
+
+    def test_lost_record_is_excluded_from_scan(self):
+        reason = self.env['crm.lost.reason'].create({'name': 'P2 test lost reason'})
+        active = self._lead(email_from='lost-match@example.com')
+        lost = self._lead(email_from='lost-match@example.com', lost_reason_id=reason.id)
+        self.Case.with_user(self.manager).action_scan()
+        self.assertFalse(self.Case.search(['|', ('lead_a_id', '=', lost.id), ('lead_b_id', '=', lost.id)]))
+        self.assertTrue(active.active and lost.active)
 
     def test_conservative_near_email_and_false_positive_control(self):
         a = self._lead(name='John Smith - Website Project', email_from='john.smith@example.com')
