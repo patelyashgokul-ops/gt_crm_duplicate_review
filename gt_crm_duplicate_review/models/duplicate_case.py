@@ -57,6 +57,7 @@ class DuplicateCase(models.Model):
     merged_at = fields.Datetime(readonly=True)
     merged_by_id = fields.Many2one('res.users', readonly=True)
     merge_event_ref = fields.Char(readonly=True)
+    merge_in_progress = fields.Boolean(default=False, readonly=True)
     event_ids = fields.One2many('gt.crm.duplicate.event', 'case_id', readonly=True)
     review_reason = fields.Text(readonly=True)
     lead_a_name = fields.Char(related='lead_a_id.name', readonly=True)
@@ -156,8 +157,10 @@ class DuplicateCase(models.Model):
             visible_pair = (
                 Domain('lead_a_id', 'in', readable) & Domain('lead_b_id', 'in', readable)
             ) | (
-                Domain('status', '=', 'merged') & Domain('lead_a_id', 'in', readable)
-                & Domain('lead_b_id', '=', False)
+                Domain('status', 'in', ['merged', 'invalid']) & (
+                    (Domain('lead_a_id', 'in', readable) & Domain('lead_b_id', '=', False))
+                    | (Domain('lead_a_id', '=', False) & Domain('lead_b_id', 'in', readable))
+                )
             )
             domain = Domain(domain) & visible_pair
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)

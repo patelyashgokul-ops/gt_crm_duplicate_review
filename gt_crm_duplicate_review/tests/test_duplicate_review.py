@@ -1,3 +1,4 @@
+from odoo import fields
 from odoo.tests import tagged, TransactionCase
 from odoo.exceptions import AccessError, UserError, ValidationError
 from unittest.mock import patch
@@ -295,14 +296,17 @@ class TestDuplicateReview(TransactionCase):
         self.assertTrue(any('UNIQUE (company_id, lead_a_id, lead_b_id)' in definition for definition in definitions))
         self.assertTrue(any('lead_a_id < lead_b_id' in definition for definition in definitions))
 
-    def test_deleted_source_removes_case(self):
+    def test_deleted_source_preserves_invalid_case_history(self):
         first = self._lead(email_from='deleted@example.com')
         second = self._lead(email_from='deleted@example.com')
         self.Case.with_user(self.manager).action_scan()
         case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
         self.assertTrue(case)
         second.unlink()
-        self.assertFalse(self.Case.search([('id', '=', case.id)]))
+        retained = self.Case.search([('id', '=', case.id)])
+        self.assertTrue(retained)
+        self.assertEqual(retained.status, 'invalid')
+        self.assertEqual(retained.event_ids[-1].event_type, 'invalidated')
 
     def test_lost_record_is_excluded_from_scan(self):
         reason = self.env['crm.lost.reason'].create({'name': 'P2 test lost reason'})

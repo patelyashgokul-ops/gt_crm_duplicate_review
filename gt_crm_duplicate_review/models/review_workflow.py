@@ -73,11 +73,54 @@ class DuplicateCaseWorkflow(models.Model):
             'status', 'reviewer_id', 'reviewed_at', 'decision_reason', 'review_reason',
             'approval_fingerprint', 'approved_by_id', 'approved_at', 'approval_reason',
             'merge_survivor_id', 'merged_at', 'merged_by_id', 'merge_event_ref',
+            'merge_in_progress',
             'lead_a_original_id', 'lead_b_original_id', 'lead_a_original_type', 'lead_b_original_type',
         }
         if protected.intersection(vals) and not self.env.su:
             raise AccessError(_('Review decisions and protected evidence must use the authorized workflow.'))
         return super().write(vals)
+
+
+class CrmLeadReviewHooks(models.Model):
+    _inherit = 'crm.lead'
+
+    _MATERIAL_REVIEW_FIELDS = frozenset({
+        'company_id', 'active', 'type', 'email_from', 'phone', 'mobile',
+        'gt_review_email_key', 'gt_review_phone_key', 'gt_review_mobile_key',
+        'partner_id', 'name', 'user_id', 'team_id', 'stage_id',
+        'expected_revenue', 'probability', 'priority', 'lost_reason_id',
+    })
+
+    def _review_cases(self):
+        return self.env['gt.crm.duplicate.case'].sudo().search([
+            '|', ('lead_a_id', 'in', self.ids), ('lead_b_id', 'in', self.ids),
+        ])
+
+    def write(self, vals):
+        result = super().write(vals)
+        changed = self._MATERIAL_REVIEW_FIELDS.intersection(vals)
+        if changed:
+            for case in self._review_cases():
+                if case.merge_in_progress or case.status in ('merged', 'invalid', 'not_duplicate'):
+                    continue
+                old_status = case.status
+                if old_status in ('pending', 'merge_approved'):
+                    case.sudo().write({'status': 'stale'})
+                    if old_status == 'merge_approved':
+                        case._append_event('approval_invalidated', old_status, 'stale',
+                                           _('A matching or merge-relevant source field changed after approval.'))
+        return result
+
+    def unlink(self):
+        cases = self._review_cases()
+        for case in cases:
+            if case.merge_in_progress or case.status in ('merged', 'invalid'):
+                continue
+            old_status = case.status
+            case.sudo().write({'status': 'invalid'})
+            case._append_event('invalidated', old_status, 'invalid',
+                               _('A source CRM record was removed outside a verified duplicate-review merge.'))
+        return super().unlink()
 
     def _require_manager(self):
         if not self.env.user.has_group(MANAGER_GROUP):
@@ -305,6 +348,7 @@ class DuplicateCaseWorkflow(models.Model):
         try:
             # A savepoint ensures native partial writes are rolled back if it raises.
             with self.env.cr.savepoint():
+                self.sudo().write({'merge_in_progress': True})
                 survivor = sources.merge_opportunity(auto_unlink=True)
                 survivor.invalidate_recordset()
                 if len(survivor) != 1 or not survivor.exists() or survivor._name != 'crm.lead':
@@ -321,6 +365,7 @@ class DuplicateCaseWorkflow(models.Model):
                     'merge_survivor_id': survivor.id, 'status': 'merged',
                     'merged_at': fields.Datetime.now(), 'merged_by_id': self.env.user.id,
                     'merge_event_ref': ref, 'last_evaluated': fields.Datetime.now(),
+                    'merge_in_progress': False,
                 })
                 self._append_event('merged', old_status, 'merged', _('Native CRM merge completed and survivor verified.'),
                                    source_fingerprint=fingerprint, approval_fingerprint=current_digest,
