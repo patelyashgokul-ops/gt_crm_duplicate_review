@@ -60,19 +60,19 @@
                     <group col="2">
                         <group string="Record A">
                             <field name="lead_a_id"/>
-                            <field name="lead_a_id.name"/><field name="lead_a_id.contact_name"/><field name="lead_a_id.partner_id"/>
-                            <field name="lead_a_id.email_from"/><field name="lead_a_id.phone"/><field name="lead_a_id.mobile"/>
-                            <field name="lead_a_id.user_id"/><field name="lead_a_id.team_id"/><field name="lead_a_id.stage_id"/>
-                            <field name="lead_a_id.expected_revenue"/><field name="lead_a_id.probability"/><field name="lead_a_id.priority"/>
-                            <field name="lead_a_id.type"/><field name="lead_a_id.active"/><field name="lead_a_id.create_date"/><field name="lead_a_id.write_date"/>
+                            <field name="lead_a_name"/><field name="lead_a_contact_name"/><field name="lead_a_partner_id"/>
+                            <field name="lead_a_email"/><field name="lead_a_phone"/><field name="lead_a_mobile"/>
+                            <field name="lead_a_user_id"/><field name="lead_a_team_id"/><field name="lead_a_stage_id"/>
+                            <field name="lead_a_revenue"/><field name="lead_a_probability"/><field name="lead_a_priority"/>
+                            <field name="lead_a_type"/><field name="lead_a_active"/><field name="lead_a_create_date"/><field name="lead_a_write_date"/>
                         </group>
                         <group string="Record B">
                             <field name="lead_b_id"/>
-                            <field name="lead_b_id.name"/><field name="lead_b_id.contact_name"/><field name="lead_b_id.partner_id"/>
-                            <field name="lead_b_id.email_from"/><field name="lead_b_id.phone"/><field name="lead_b_id.mobile"/>
-                            <field name="lead_b_id.user_id"/><field name="lead_b_id.team_id"/><field name="lead_b_id.stage_id"/>
-                            <field name="lead_b_id.expected_revenue"/><field name="lead_b_id.probability"/><field name="lead_b_id.priority"/>
-                            <field name="lead_b_id.type"/><field name="lead_b_id.active"/><field name="lead_b_id.create_date"/><field name="lead_b_id.write_date"/>
+                            <field name="lead_b_name"/><field name="lead_b_contact_name"/><field name="lead_b_partner_id"/>
+                            <field name="lead_b_email"/><field name="lead_b_phone"/><field name="lead_b_mobile"/>
+                            <field name="lead_b_user_id"/><field name="lead_b_team_id"/><field name="lead_b_stage_id"/>
+                            <field name="lead_b_revenue"/><field name="lead_b_probability"/><field name="lead_b_priority"/>
+                            <field name="lead_b_type"/><field name="lead_b_active"/><field name="lead_b_create_date"/><field name="lead_b_write_date"/>
                         </group>
                     </group>
                     <div class="alert alert-info" role="alert">A match score ranks similarity. It is not a probability or a confirmed duplicate.</div>
