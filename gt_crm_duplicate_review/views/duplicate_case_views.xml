@@ -1,0 +1,50 @@
+<odoo>
+    <record id="view_duplicate_case_list" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.case.list</field>
+        <field name="model">gt.crm.duplicate.case</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" delete="0">
+                <field name="company_id"/>
+                <field name="lead_a_id"/>
+                <field name="lead_b_id"/>
+                <field name="match_type"/>
+                <field name="match_score"/>
+                <field name="status"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_duplicate_case_form" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.case.form</field>
+        <field name="model">gt.crm.duplicate.case</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0" delete="0">
+                <header><field name="status" widget="statusbar"/></header>
+                <sheet>
+                    <group>
+                        <field name="company_id"/>
+                        <field name="lead_a_id"/>
+                        <field name="lead_b_id"/>
+                        <field name="match_type"/>
+                        <field name="match_score"/>
+                        <field name="match_explanation"/>
+                        <field name="source_fingerprint"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_duplicate_case" model="ir.actions.act_window">
+        <field name="name">Duplicate Review</field>
+        <field name="res_model">gt.crm.duplicate.case</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_duplicate_scan" model="ir.actions.server">
+        <field name="name">Scan CRM Duplicates</field>
+        <field name="model_id" ref="model_gt_crm_duplicate_case"/>
+        <field name="state">code</field>
+        <field name="code">env['gt.crm.duplicate.case'].action_scan()</field>
+    </record>
+    <menuitem id="menu_duplicate_review" name="Duplicate Review" parent="crm.crm_menu_root" sequence="30" groups="group_duplicate_review_user"/>
+    <menuitem id="menu_duplicate_cases" name="Candidates" parent="menu_duplicate_review" action="action_duplicate_case" sequence="10"/>
+    <menuitem id="menu_duplicate_scan" name="Scan CRM Duplicates" parent="menu_duplicate_review" action="action_duplicate_scan" sequence="20" groups="group_duplicate_review_manager"/>
+</odoo>

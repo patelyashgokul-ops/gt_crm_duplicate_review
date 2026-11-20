@@ -1,0 +1,63 @@
+from odoo.tests import tagged, TransactionCase
+from odoo.exceptions import AccessError
+
+from ..models.normalization import normalize_email, normalize_phone
+
+
+@tagged('post_install', '-at_install')
+class TestDuplicateReview(TransactionCase):
+
+    def setUp(self):
+        super().setUp()
+        self.company = self.env.company
+        self.Case = self.env['gt.crm.duplicate.case']
+        self.Lead = self.env['crm.lead']
+        self.manager = self.env['res.users'].create({
+            'name': 'Review Manager', 'login': 'review_manager_test',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                    self.env.ref('sales_team.group_sale_manager').id,
+                                    self.env.ref('gt_crm_duplicate_review.group_duplicate_review_manager').id])],
+        })
+
+    def _lead(self, **values):
+        return self.Lead.create(dict(name='Duplicate test', company_id=self.company.id, **values))
+
+    def test_normalization(self):
+        self.assertEqual(normalize_email('  A.B+tag@Example.COM  '), 'a.b+tag@example.com')
+        self.assertNotEqual(normalize_email('a@example.com'), normalize_email('b@example.com'))
+        self.assertFalse(normalize_email('bad@'))
+        self.assertFalse(normalize_email(''))
+        self.assertFalse(normalize_phone('5551234567'))
+        self.assertFalse(normalize_phone('garbage'))
+        self.assertEqual(normalize_phone('+1 650-253-0000'), '+16502530000')
+
+    def test_exact_match_and_repeat(self):
+        a = self._lead(email_from='First@Example.com', phone='+1 650-253-0000')
+        b = self._lead(email_from=' first@example.com ', mobile='+1 (650) 253-0000')
+        before = {x.id: (x.active, x.company_id.id) for x in (a, b)}
+        self.Case.with_user(self.manager).action_scan()
+        cases = self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(cases.match_type, 'email')
+        self.Case.with_user(self.manager).action_scan()
+        self.assertEqual(len(self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])), 1)
+        self.assertEqual({x.id: (x.active, x.company_id.id) for x in (a, b)}, before)
+
+    def test_company_and_blank_exclusion(self):
+        a = self._lead(email_from='same@example.com')
+        other_company = self.env['res.company'].create({'name': 'Other Scan Company'})
+        self.Lead.create({'name': 'Other', 'company_id': other_company.id, 'email_from': 'same@example.com'})
+        self._lead(email_from=False, phone=False, mobile=False)
+        self.Case.with_user(self.manager).action_scan()
+        self.assertFalse(self.Case.search([('lead_a_id', '=', a.id)]))
+
+    def test_scan_permission_and_candidate_create(self):
+        user = self.env['res.users'].create({
+            'name': 'Review User', 'login': 'review_user_test',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                    self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id])],
+        })
+        with self.assertRaises(AccessError):
+            self.Case.with_user(user).action_scan()
+        with self.assertRaises(AccessError):
+            self.Case.with_user(user).create({'company_id': self.company.id})

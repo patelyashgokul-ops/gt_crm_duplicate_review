@@ -1,0 +1,3 @@
+id,name,model_id,group_id/id,operation,domain
+access_duplicate_case_user,Duplicate Review User,gt.crm.duplicate.case,gt_crm_duplicate_review.group_duplicate_review_user,r,"[('company_id', 'in', company_ids)]"
+access_duplicate_case_manager,Duplicate Review Manager,gt.crm.duplicate.case,gt_crm_duplicate_review.group_duplicate_review_manager,r,"[('company_id', 'in', company_ids)]"

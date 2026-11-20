@@ -1,0 +1,9 @@
+<odoo>
+    <record id="group_duplicate_review_user" model="res.groups">
+        <field name="name">Duplicate Review User</field>
+    </record>
+    <record id="group_duplicate_review_manager" model="res.groups">
+        <field name="name">Duplicate Review Manager</field>
+        <field name="implied_ids" eval="[(4, ref('group_duplicate_review_user'))]"/>
+    </record>
+</odoo>
