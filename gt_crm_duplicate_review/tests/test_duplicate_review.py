@@ -471,6 +471,18 @@ class TestDuplicateReview(TransactionCase):
         model = self.Case.with_user(user)
         self.assertFalse(model.search_read([('id', '=', case.id)], ['match_score']))
         self.assertFalse(model.read_group([], ['company_id'], ['__count']))
+        self.assertFalse(model.search_count([('id', '=', case.id)]))
+        self.assertFalse(model.name_search(name=str(case.id)))
+        with self.assertRaises(AccessError):
+            case.with_user(self.manager).write({'status': 'merged'})
+        with self.assertRaises(AccessError):
+            self.env['gt.crm.duplicate.event'].with_user(self.manager).create({
+                'case_id': case.id, 'company_id': case.company_id.id,
+                'event_type': 'merged', 'actor_id': self.manager.id,
+                'event_at': fields.Datetime.now(),
+            })
+        with self.assertRaises(AccessError):
+            model.load(['id', 'status'], [[str(case.id), 'merged']])
 
     def test_near_phone_is_disabled(self):
         first = self._lead(name='Same Contact', phone='+1 650-253-0000')
@@ -565,3 +577,31 @@ class TestDuplicateReview(TransactionCase):
         })
         with self.assertRaises(AccessError):
             self.Case.with_user(ordinary)._cron_scan_enabled_companies()
+
+    def test_p4_oversized_group_skip_is_explicit_and_ends_partial(self):
+        [self._lead(email_from='oversized-resume@example.test') for _ in range(5)]
+        with patch.object(duplicate_case, 'GROUP_LIMIT', 2):
+            self.Case.with_user(self.manager).action_scan()
+            cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)])
+            self.assertEqual(cursor.state, 'blocked')
+            skipped = 0
+            while cursor.state == 'blocked' and skipped < 10:
+                self.Case.with_user(self.manager).action_skip_blocked_group()
+                skipped += 1
+                result = self.Case.with_user(self.manager).action_scan()
+            self.assertGreater(skipped, 0)
+            self.assertEqual(cursor.state, 'partial')
+            self.assertGreaterEqual(cursor.incomplete_groups, skipped)
+            self.assertEqual(result['params']['type'], 'warning')
+
+    def test_p4_scheduled_scan_is_disabled_by_default_and_company_scoped_when_enabled(self):
+        company_b = self.env['res.company'].create({'name': 'Cron Disabled Company'})
+        self._lead(email_from='cron-enabled@example.test')
+        self.Lead.create({'name': 'Cron B', 'company_id': company_b.id, 'email_from': 'cron-disabled@example.test'})
+        self.assertFalse(self.company.duplicate_review_scan_enabled)
+        self.assertFalse(company_b.duplicate_review_scan_enabled)
+        self.company.duplicate_review_scan_enabled = True
+        self.Case._cron_scan_enabled_companies()
+        Scan = self.env['gt.crm.duplicate.scan'].sudo()
+        self.assertTrue(Scan.search([('company_id', '=', self.company.id)]))
+        self.assertFalse(Scan.search([('company_id', '=', company_b.id)]))
