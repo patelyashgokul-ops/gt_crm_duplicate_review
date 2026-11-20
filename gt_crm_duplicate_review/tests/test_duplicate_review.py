@@ -100,6 +100,62 @@ class TestDuplicateReview(TransactionCase):
         with self.assertRaises(UserError):
             case._execute_approved_merge(True)
 
+    def test_p3_not_duplicate_reopens_only_after_material_key_change(self):
+        a = self._lead(email_from='unchanged@example.test', phone='+1 650-253-0000')
+        b = self._lead(email_from='unchanged@example.test', mobile='+1 650-253-0000')
+        case = self._candidate_case(a, b).with_user(self.manager)
+        case._decide_not_duplicate('separate_opportunities', 'Separate active sales requirements.')
+        case.action_recheck()
+        self.assertEqual(case.status, 'not_duplicate')
+        b.write({'mobile': '+1 415-555-0100'})
+        self.assertEqual(case.status, 'not_duplicate', 'Decision is reopened only after controlled reevaluation')
+        case.action_recheck()
+        self.assertEqual(case.status, 'pending')
+        self.assertIn('reopened', case.event_ids.mapped('event_type'))
+        self.assertIn('not_duplicate', case.event_ids.mapped('event_type'))
+
+    def test_p3_changed_approved_source_blocks_merge(self):
+        a = self._lead(type='opportunity', email_from='stale-approval@example.test', phone='+1 650-253-0000')
+        b = self._lead(type='opportunity', email_from='stale-approval@example.test', mobile='+1 650-253-0000')
+        case = self._candidate_case(a, b).with_user(self.manager)
+        case._approve_merge('Approved after reviewing the source records.')
+        b.write({'user_id': self.manager.id})
+        self.assertEqual(case.status, 'stale')
+        with self.assertRaises(UserError):
+            case._execute_approved_merge(True)
+        self.assertTrue(a.exists() and b.exists())
+        self.assertNotIn('merged', case.event_ids.mapped('event_type'))
+
+    def test_p3_failed_native_merge_rolls_back_without_false_success(self):
+        a = self._lead(type='opportunity', name='Before merge', email_from='failure@example.test', phone='+1 650-253-0000')
+        b = self._lead(type='opportunity', email_from='failure@example.test', mobile='+1 650-253-0000')
+        case = self._candidate_case(a, b).with_user(self.manager)
+        case._approve_merge('Approved after full comparison review.')
+        lead_model_class = type(self.Lead)
+
+        def partial_then_fail(records, *args, **kwargs):
+            records[0].write({'name': 'Partially changed'})
+            raise RuntimeError('Injected native merge interruption')
+
+        with patch.object(lead_model_class, 'merge_opportunity', partial_then_fail):
+            with self.assertRaises(UserError):
+                case._execute_approved_merge(True)
+        self.assertEqual(a.name, 'Before merge')
+        self.assertEqual(case.status, 'merge_approved')
+        self.assertNotIn('merged', case.event_ids.mapped('event_type'))
+        self.assertTrue(a.exists() and b.exists())
+
+    def test_p3_event_records_are_append_only(self):
+        a = self._lead(email_from='event-lock@example.test')
+        b = self._lead(email_from='event-lock@example.test')
+        case = self._candidate_case(a, b).with_user(self.manager)
+        case._decide_not_duplicate('false_positive', 'Separate contacts and sales work.')
+        event = case.event_ids[-1]
+        with self.assertRaises(AccessError):
+            event.write({'reason': 'tampered'})
+        with self.assertRaises(AccessError):
+            event.unlink()
+
     def test_exact_match_and_repeat(self):
         a = self._lead(email_from='First@Example.com', phone='+1 650-253-0000')
         b = self._lead(email_from=' first@example.com ', mobile='+1 (650) 253-0000')
