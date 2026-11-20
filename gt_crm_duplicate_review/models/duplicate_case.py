@@ -165,11 +165,13 @@ class DuplicateCase(models.Model):
                     | (Domain('lead_a_id', '=', False) & Domain('lead_b_id', '=', False))
                 )
             )
-            domain = Domain(domain) & visible_pair
+            domain = Domain(domain) & visible_pair & Domain('company_id', 'in', self.env.companies.ids)
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
 
     def _check_source_access(self):
         if self and not self.env.su:
+            if any(case.company_id not in self.env.companies for case in self):
+                raise AccessError(self.env._('This duplicate case is not available in the active companies.'))
             source_ids = set(self.mapped('lead_a_id').ids + self.mapped('lead_b_id').ids)
             readable_ids = set(self.env['crm.lead'].search([('id', 'in', list(source_ids))]).ids)
             if source_ids != readable_ids:

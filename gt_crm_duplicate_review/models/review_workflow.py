@@ -73,8 +73,22 @@ class DuplicateEvent(models.Model):
     def _search(self, domain, offset=0, limit=None, order=None, *, active_test=True, bypass_access=False):
         if not self.env.su and not bypass_access:
             visible_cases = self.env['gt.crm.duplicate.case']
-            domain = Domain('case_id', 'in', visible_cases._search([])) & Domain(domain)
+            domain = Domain('case_id', 'in', visible_cases._search([])) & Domain('company_id', 'in', self.env.companies.ids) & Domain(domain)
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
+
+    def _check_case_read_access(self):
+        if self and not self.env.su:
+            cases = self.mapped('case_id')
+            cases.check_access('read')
+            cases._check_source_access()
+
+    def read(self, fields=None, load='_classic_read'):
+        self._check_case_read_access()
+        return super().read(fields=fields, load=load)
+
+    def web_read(self, specification):
+        self._check_case_read_access()
+        return super().web_read(specification)
 
 
 class DuplicateCaseWorkflow(models.Model):

@@ -261,6 +261,14 @@ class TestDuplicateReview(TransactionCase):
         case_b = self.Case.sudo().search([('lead_a_id', '=', b1.id), ('lead_b_id', '=', b2.id)])
         self.assertTrue(case_a and case_b)
         self.assertFalse(self.Case.sudo().search([('lead_a_id', 'in', [a1.id, a2.id]), ('lead_b_id', 'in', [b1.id, b2.id])]))
+        company_b_only = self.Case.with_user(manager).with_context(allowed_company_ids=[company_b.id])
+        self.assertEqual(company_b_only.search_count([('id', '=', case_a.id)]), 0)
+        with self.assertRaises(AccessError):
+            case_a.with_user(manager).with_context(allowed_company_ids=[company_b.id]).read(['match_score'])
+        case_a.sudo()._append_event('reviewed', 'pending', 'pending', 'P4 active-company scope test.')
+        event = case_a.event_ids[-1]
+        with self.assertRaises(AccessError):
+            event.with_user(manager).with_context(allowed_company_ids=[company_b.id]).read(['reason'])
         for company, visible_case, hidden_case, login in (
             (company_a, case_a, case_b, 'company_a_reviewer'),
             (company_b, case_b, case_a, 'company_b_reviewer'),
