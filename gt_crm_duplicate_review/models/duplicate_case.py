@@ -170,7 +170,13 @@ class DuplicateCase(models.Model):
 
     def _check_source_access(self):
         if self and not self.env.su:
-            if any(case.company_id not in self.env.companies for case in self):
+            # Read only the company metadata under narrowly scoped elevation so
+            # Odoo's company-record-rule helper cannot suggest switching into
+            # a hidden company after a forged direct-ID request.
+            company_rows = self.sudo().read(['company_id'])
+            active_company_ids = set(self.env.companies.ids)
+            if any((row['company_id'] and row['company_id'][0] not in active_company_ids)
+                   for row in company_rows):
                 raise AccessError(self.env._('This duplicate case is not available in the active companies.'))
             source_ids = set(self.mapped('lead_a_id').ids + self.mapped('lead_b_id').ids)
             readable_ids = set(self.env['crm.lead'].search([('id', 'in', list(source_ids))]).ids)

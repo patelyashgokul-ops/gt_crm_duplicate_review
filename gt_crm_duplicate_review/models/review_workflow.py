@@ -78,7 +78,15 @@ class DuplicateEvent(models.Model):
 
     def _check_case_read_access(self):
         if self and not self.env.su:
-            cases = self.mapped('case_id')
+            # Resolve only event company/case links internally first. This
+            # avoids Odoo's generic company-switch suggestion on direct IDs.
+            rows = self.sudo().read(['company_id', 'case_id'])
+            active_company_ids = set(self.env.companies.ids)
+            if any((row['company_id'] and row['company_id'][0] not in active_company_ids)
+                   for row in rows):
+                raise AccessError(_('This review history is not available in the active companies.'))
+            case_ids = [row['case_id'][0] for row in rows if row['case_id']]
+            cases = self.env['gt.crm.duplicate.case'].browse(case_ids)
             cases.check_access('read')
             cases._check_source_access()
 
