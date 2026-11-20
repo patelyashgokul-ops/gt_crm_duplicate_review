@@ -1,10 +1,14 @@
 {
     'name': 'CRM Duplicate Review',
-    'version': '20.0.4.0.0',
+    'version': '20.0.5.0.0',
     'summary': 'Securely review CRM lead and opportunity duplicate candidates',
     'author': 'Golok Technology',
+    'maintainer': 'Golok Technology',
+    'support': 'patelyash.gokul@gmail.com',
     'category': 'CRM',
     'license': 'OPL-1',
+    'price': 69.0,
+    'currency': 'USD',
     'depends': ['crm'],
     'data': [
         'security/duplicate_review_groups.xml',

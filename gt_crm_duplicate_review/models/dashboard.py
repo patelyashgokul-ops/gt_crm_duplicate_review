@@ -10,7 +10,9 @@ REVIEW_GROUP = 'gt_crm_duplicate_review.group_duplicate_review_user'
 class DuplicateReviewDashboard(models.TransientModel):
     _name = 'gt.crm.duplicate.dashboard'
     _description = 'CRM Duplicate Review Dashboard'
+    _rec_name = 'name'
 
+    name = fields.Char(default='CRM Duplicate Review', readonly=True)
     pending_count = fields.Integer(compute='_compute_metrics', readonly=True)
     strong_count = fields.Integer(compute='_compute_metrics', readonly=True)
     possible_count = fields.Integer(compute='_compute_metrics', readonly=True)
@@ -63,7 +65,7 @@ class DuplicateReviewDashboard(models.TransientModel):
             raise AccessError(_('You are not allowed to create a Duplicate Review dashboard.'))
         # Metrics are computed on read under the caller's current CRM rules;
         # never persist or accept client-supplied counter values.
-        return super().create([{} for _vals in vals_list])
+        return super().create([{'name': _('CRM Duplicate Review')} for _vals in vals_list])
 
     def write(self, vals):
         raise AccessError(_('Dashboard metrics are read only.'))
