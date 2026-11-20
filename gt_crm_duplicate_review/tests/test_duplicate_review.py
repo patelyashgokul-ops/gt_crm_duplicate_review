@@ -624,3 +624,128 @@ class TestDuplicateReview(TransactionCase):
         Scan = self.env['gt.crm.duplicate.scan'].sudo()
         self.assertTrue(Scan.search([('company_id', '=', self.company.id)]))
         self.assertFalse(Scan.search([('company_id', '=', company_b.id)]))
+
+    def test_p5_dashboard_all_metric_states_and_kpi_actions(self):
+        cases = {}
+        states = [
+            ('pending_strong', 'pending', 'strong'),
+            ('pending_possible', 'pending', 'possible'),
+            ('approved', 'merge_approved', 'strong'),
+            ('merged', 'merged', 'strong'),
+            ('not_duplicate', 'not_duplicate', 'review'),
+            ('stale', 'stale', 'review'),
+            ('invalid', 'invalid', 'review'),
+        ]
+        for index, (key, status, band) in enumerate(states):
+            email = f'p5-dashboard-{index}@unique.example.test'
+            phone = f'+1 650 253 {1000 + index}'
+            a = self._lead(name=f'Dashboard {key} A', email_from=email, phone=phone)
+            b = self._lead(name=f'Dashboard {key} B', email_from=email, mobile=phone)
+            cases[key] = self._candidate_case(a, b)
+            cases[key].sudo().write({
+                'status': status,
+                'confidence_band': band,
+                'conflict_indicators': ['P5 dashboard conflict'] if key == 'pending_strong' else [],
+            })
+
+        self.env['gt.crm.duplicate.scan'].sudo().create({
+            'company_id': self.company.id, 'state': 'complete',
+        })
+        dashboard = self.env['gt.crm.duplicate.dashboard'].with_user(self.manager).with_company(
+            self.company,
+        ).create({'pending_count': 9999, 'merged_count': 9999})
+        self.assertEqual((dashboard.pending_count, dashboard.strong_count, dashboard.possible_count), (2, 2, 1))
+        self.assertEqual((dashboard.merge_approved_count, dashboard.merged_count), (1, 1))
+        self.assertEqual((dashboard.not_duplicate_count, dashboard.stale_count, dashboard.invalid_count), (1, 1, 1))
+        self.assertEqual((dashboard.conflict_count, dashboard.recent_scan_status), (1, 'complete'))
+
+        action_map = {
+            'pending': ('action_pending', ['pending_strong', 'pending_possible']),
+            'strong': ('action_strong', ['pending_strong', 'approved']),
+            'possible': ('action_possible', ['pending_possible']),
+            'approved': ('action_approved', ['approved']),
+            'merged': ('action_merged', ['merged']),
+            'not_duplicate': ('action_not_duplicate', ['not_duplicate']),
+            'stale': ('action_stale', ['stale']),
+            'invalid': ('action_invalid', ['invalid']),
+            'conflicts': ('action_conflicts', ['pending_strong']),
+        }
+        Case = self.Case.with_user(self.manager).with_company(self.company)
+        for method, expected_keys in action_map.values():
+            action = getattr(dashboard, method)()
+            result = Case.search(action['domain'])
+            self.assertEqual(set(result.ids), {cases[key].id for key in expected_keys}, method)
+
+    def test_p5_role_acl_and_protected_method_matrix(self):
+        lead_a = self._lead(name='P5 Role Matrix A', email_from='role-matrix@example.test')
+        lead_b = self._lead(name='P5 Role Matrix B', email_from='role-matrix@example.test')
+        case = self._candidate_case(lead_a, lead_b)
+        review_user = self.env['res.users'].create({
+            'name': 'P5 Review User', 'login': 'p5_review_user_matrix',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                  self.env.ref('sales_team.group_sale_salesman').id,
+                                  self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id])],
+        })
+        crm_user = self.env['res.users'].create({
+            'name': 'P5 CRM User', 'login': 'p5_crm_user_matrix',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                  self.env.ref('sales_team.group_sale_salesman').id])],
+        })
+        Case = self.env['gt.crm.duplicate.case']
+        Event = self.env['gt.crm.duplicate.event']
+        Wizard = self.env['gt.crm.duplicate.review.wizard']
+        MergeWizard = self.env['gt.crm.duplicate.merge.confirm.wizard']
+        Dashboard = self.env['gt.crm.duplicate.dashboard']
+        Scan = self.env['gt.crm.duplicate.scan']
+        case.with_user(self.manager)._decide_not_duplicate(
+            'separate_opportunities', 'Role matrix source pair is intentionally separate.',
+        )
+        event = case.event_ids[-1]
+
+        for user in (crm_user, review_user):
+            with self.assertRaises(AccessError):
+                Case.with_user(user).create({'company_id': self.company.id})
+            with self.assertRaises(AccessError):
+                Case.with_user(user).browse(case.id).write({'status': 'merged'})
+            with self.assertRaises(AccessError):
+                Case.with_user(user).browse(case.id).unlink()
+            with self.assertRaises(AccessError):
+                Event.with_user(user).create({'company_id': self.company.id, 'case_id': case.id})
+            with self.assertRaises(AccessError):
+                Event.with_user(user).browse(event.id).write({'reason': 'forged'})
+            with self.assertRaises(AccessError):
+                Event.with_user(user).browse(event.id).unlink()
+            with self.assertRaises(AccessError):
+                Case.with_user(user).action_scan()
+            with self.assertRaises(AccessError):
+                Wizard.with_user(user).create({'case_id': case.id})
+            with self.assertRaises(AccessError):
+                MergeWizard.with_user(user).create({'case_id': case.id})
+
+        for user in (crm_user, review_user, self.manager):
+            with self.assertRaises(AccessError):
+                Case.with_user(user).create({'company_id': self.company.id})
+            with self.assertRaises(AccessError):
+                Case.with_user(user).browse(case.id).write({'match_score': 1})
+            with self.assertRaises(AccessError):
+                Case.with_user(user).browse(case.id).unlink()
+            with self.assertRaises(AccessError):
+                Event.with_user(user).create({'company_id': self.company.id, 'case_id': case.id})
+            with self.assertRaises(AccessError):
+                Event.with_user(user).browse(event.id).write({'reason': 'forged'})
+            with self.assertRaises(AccessError):
+                Scan.with_user(user).create({'company_id': self.company.id})
+
+        with self.assertRaises(AccessError):
+            Dashboard.with_user(crm_user).create({})
+        for user in (review_user, self.manager):
+            dashboard = Dashboard.with_user(user).with_company(self.company).create({})
+            with self.assertRaises(AccessError):
+                dashboard.write({'pending_count': 123})
+            with self.assertRaises(AccessError):
+                dashboard.unlink()
+        with self.assertRaises(AccessError):
+            Wizard.with_user(review_user).create({'case_id': case.id})
+        with self.assertRaises(AccessError):
+            case.with_user(review_user)._approve_merge('A reviewer cannot approve this case.')
+        self.assertEqual(case.status, 'pending')
