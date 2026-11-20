@@ -23,6 +23,8 @@ class TestDuplicateReview(TransactionCase):
         return self.Lead.create(dict(name='Duplicate test', company_id=self.company.id, **values))
 
     def test_normalization(self):
+        self.assertEqual(self.env.ref('gt_crm_duplicate_review.menu_duplicate_review').name, 'Duplicate Review')
+        self.assertEqual(self.env.ref('gt_crm_duplicate_review.action_duplicate_case').res_model, 'gt.crm.duplicate.case')
         self.assertEqual(normalize_email('  A.B+tag@Example.COM  '), 'a.b+tag@example.com')
         self.assertNotEqual(normalize_email('a@example.com'), normalize_email('b@example.com'))
         self.assertFalse(normalize_email('bad@'))
@@ -50,6 +52,15 @@ class TestDuplicateReview(TransactionCase):
         self._lead(email_from=False, phone=False, mobile=False)
         self.Case.with_user(self.manager).action_scan()
         self.assertFalse(self.Case.search([('lead_a_id', '=', a.id)]))
+
+    def test_company_less_lead_is_not_paired(self):
+        self._lead(email_from='nocompany@example.com')
+        without_company = self.Lead.create({'name': 'Company-less', 'company_id': False,
+                                            'email_from': 'nocompany@example.com'})
+        self.assertFalse(without_company.company_id)
+        self.Case.with_user(self.manager).action_scan()
+        self.assertFalse(self.Case.search([('lead_a_id', '=', without_company.id)]))
+        self.assertFalse(self.Case.search([('lead_b_id', '=', without_company.id)]))
 
     def test_scan_permission_and_candidate_create(self):
         user = self.env['res.users'].create({
@@ -84,6 +95,8 @@ class TestDuplicateReview(TransactionCase):
                                     self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id])],
         })
         self.assertEqual(self.Case.with_user(user).search_count([('id', '=', case.id)]), 0)
+        with self.assertRaises(AccessError):
+            case.with_user(user).read(['match_explanation'])
 
     def test_scan_rollback(self):
         first = self._lead(email_from='rollback@example.com')
