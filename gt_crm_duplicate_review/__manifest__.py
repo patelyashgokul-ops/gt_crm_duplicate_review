@@ -5,6 +5,7 @@
     'author': 'Golok Technology',
     'maintainer': 'Golok Technology',
     'support': 'patelyash.gokul@gmail.com',
+    'live_test_url': 'https://mail.google.com/mail/?view=cm&fs=1&to=patelyash.gokul%40gmail.com&su=Schedule%20Demo%20-%20CRM%20Duplicate%20Review',
     'category': 'CRM',
     'license': 'OPL-1',
     'price': 69.0,
