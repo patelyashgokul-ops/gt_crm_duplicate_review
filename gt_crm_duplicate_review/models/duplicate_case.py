@@ -20,8 +20,12 @@ class DuplicateCase(models.Model):
     _check_company_auto = True
 
     company_id = fields.Many2one('res.company', required=True, index=True)
-    lead_a_id = fields.Many2one('crm.lead', required=True, ondelete='cascade', check_company=True)
-    lead_b_id = fields.Many2one('crm.lead', required=True, ondelete='cascade', check_company=True)
+    lead_a_id = fields.Many2one('crm.lead', ondelete='set null', check_company=True)
+    lead_b_id = fields.Many2one('crm.lead', ondelete='set null', check_company=True)
+    lead_a_original_id = fields.Integer(required=True, index=True, readonly=True)
+    lead_b_original_id = fields.Integer(required=True, index=True, readonly=True)
+    lead_a_original_type = fields.Selection([('lead', 'Lead'), ('opportunity', 'Opportunity')], readonly=True)
+    lead_b_original_type = fields.Selection([('lead', 'Lead'), ('opportunity', 'Opportunity')], readonly=True)
     match_type = fields.Selection([
         ('email_phone', 'Exact Email + Phone'), ('email_exact', 'Exact Email'),
         ('phone_exact', 'Exact Phone'), ('email_near', 'Near Email'),
@@ -36,15 +40,25 @@ class DuplicateCase(models.Model):
     shared_contact = fields.Boolean()
     last_evaluated = fields.Datetime()
     match_explanation = fields.Char(required=True)
-    status = fields.Selection(
-        [('pending', 'Pending'), ('stale', 'Stale')],
-        compute='_compute_status', store=True,
-    )
+    status = fields.Selection([
+        ('pending', 'Pending'), ('stale', 'Stale'), ('not_duplicate', 'Not Duplicate'),
+        ('merge_approved', 'Merge Approved'), ('merged', 'Merged'), ('invalid', 'Invalid'),
+    ], required=True, default='pending', index=True)
     evidence_current = fields.Boolean(compute='_compute_evidence_current', store=True)
     reviewer_id = fields.Many2one('res.users')
     reviewed_at = fields.Datetime()
     decision_reason = fields.Text()
     source_fingerprint = fields.Char(required=True)
+    approval_fingerprint = fields.Char(readonly=True)
+    approved_by_id = fields.Many2one('res.users', readonly=True)
+    approved_at = fields.Datetime(readonly=True)
+    approval_reason = fields.Text(readonly=True)
+    merge_survivor_id = fields.Many2one('crm.lead', ondelete='set null', readonly=True)
+    merged_at = fields.Datetime(readonly=True)
+    merged_by_id = fields.Many2one('res.users', readonly=True)
+    merge_event_ref = fields.Char(readonly=True)
+    event_ids = fields.One2many('gt.crm.duplicate.event', 'case_id', readonly=True)
+    review_reason = fields.Text(readonly=True)
     lead_a_name = fields.Char(related='lead_a_id.name', readonly=True)
     lead_b_name = fields.Char(related='lead_b_id.name', readonly=True)
     lead_a_contact_name = fields.Char(related='lead_a_id.contact_name', readonly=True)
@@ -80,7 +94,8 @@ class DuplicateCase(models.Model):
     lead_b_write_date = fields.Datetime(related='lead_b_id.write_date', readonly=True)
 
     _unique_pair = models.Constraint('unique(company_id, lead_a_id, lead_b_id)', 'This candidate pair already exists.')
-    _ordered_pair = models.Constraint('check(lead_a_id < lead_b_id)', 'Candidate pairs must contain two distinct leads in canonical order.')
+    _ordered_pair = models.Constraint('check(lead_a_id is null or lead_b_id is null or lead_a_id < lead_b_id)', 'Candidate pairs must contain two distinct leads in canonical order.')
+    _distinct_original_pair = models.Constraint('check(lead_a_original_id < lead_b_original_id)', 'Historical source identifiers must be in canonical order.')
 
     @api.depends(
         'company_id', 'lead_a_id', 'lead_b_id', 'match_type', 'source_fingerprint',
@@ -107,11 +122,6 @@ class DuplicateCase(models.Model):
                 )
             )
 
-    @api.depends('evidence_current')
-    def _compute_status(self):
-        for case in self:
-            case.status = 'pending' if case.evidence_current else 'stale'
-
     @api.depends('conflict_indicators')
     def _compute_conflict_count(self):
         for case in self:
@@ -130,7 +140,11 @@ class DuplicateCase(models.Model):
     @api.constrains('company_id', 'lead_a_id', 'lead_b_id')
     def _check_pair_company(self):
         for case in self:
-            if not case.lead_a_id.company_id or case.lead_a_id.company_id != case.company_id or case.lead_b_id.company_id != case.company_id:
+            if case.status != 'merged' and (not case.lead_a_id or not case.lead_b_id):
+                raise ValidationError(self.env._('Both CRM records must exist for an unmerged case.'))
+            if case.lead_a_id and (not case.lead_a_id.company_id or case.lead_a_id.company_id != case.company_id):
+                raise ValidationError(self.env._('Both CRM records must belong to the case company.'))
+            if case.lead_b_id and case.lead_b_id.company_id != case.company_id:
                 raise ValidationError(self.env._('Both CRM records must belong to the case company.'))
 
     @api.model
@@ -160,6 +174,15 @@ class DuplicateCase(models.Model):
     def create(self, vals_list):
         if not self.env.su:
             raise AccessError(self.env._('Candidate creation is reserved for the internal scanner.'))
+        for vals in vals_list:
+            a_id, b_id = vals.get('lead_a_id'), vals.get('lead_b_id')
+            if a_id and b_id:
+                vals.setdefault('lead_a_original_id', min(a_id, b_id))
+                vals.setdefault('lead_b_original_id', max(a_id, b_id))
+                leads = self.env['crm.lead'].sudo().browse([a_id, b_id]).exists()
+                types = {lead.id: lead.type for lead in leads}
+                vals.setdefault('lead_a_original_type', types.get(min(a_id, b_id)))
+                vals.setdefault('lead_b_original_type', types.get(max(a_id, b_id)))
         return super().create(vals_list)
 
     def write(self, vals):
