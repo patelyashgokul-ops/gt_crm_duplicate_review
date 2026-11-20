@@ -57,6 +57,13 @@ class DuplicateReviewDashboard(models.TransientModel):
         values = self._dashboard_values()
         return super().create([dict(values) for _vals in vals_list])
 
+    @api.model
+    def default_get(self, fields_list):
+        defaults = super().default_get(fields_list)
+        if self.env.user.has_group(REVIEW_GROUP):
+            defaults.update(self._dashboard_values())
+        return defaults
+
     def write(self, vals):
         raise AccessError(_('Dashboard metrics are read only.'))
 
