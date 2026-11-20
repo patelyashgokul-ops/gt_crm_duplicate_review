@@ -11,6 +11,7 @@
     'price': 69.0,
     'currency': 'USD',
     'images': [
+        'static/description/banner.png',
         'static/description/dashboard.png',
         'static/description/review_queue.png',
         'static/description/case_comparison.png',
