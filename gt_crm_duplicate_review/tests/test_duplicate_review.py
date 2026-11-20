@@ -748,4 +748,4 @@ class TestDuplicateReview(TransactionCase):
             Wizard.with_user(review_user).create({'case_id': case.id})
         with self.assertRaises(AccessError):
             case.with_user(review_user)._approve_merge('A reviewer cannot approve this case.')
-        self.assertEqual(case.status, 'pending')
+        self.assertEqual(case.status, 'not_duplicate')
