@@ -1,6 +1,6 @@
 {
     'name': 'CRM Duplicate Review',
-    'version': '20.0.1.0.0',
+    'version': '20.0.2.0.0',
     'summary': 'Review exact CRM lead and opportunity duplicate candidates',
     'author': 'Golok Technology',
     'category': 'CRM',

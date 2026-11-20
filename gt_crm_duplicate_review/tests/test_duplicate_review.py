@@ -1,9 +1,13 @@
 from odoo.tests import tagged, TransactionCase
 from odoo.exceptions import AccessError
 from unittest.mock import patch
+import logging
+import time
 
 from ..models.normalization import normalize_email, normalize_phone
 from ..models import duplicate_case
+
+_logger = logging.getLogger(__name__)
 
 
 @tagged('post_install', '-at_install')
@@ -246,3 +250,16 @@ class TestDuplicateReview(TransactionCase):
         first = self._lead(name='Same Contact', phone='+1 650-253-0000')
         second = self._lead(name='Same Contact', phone='+1 650-253-0001')
         self.assertFalse(duplicate_case.evaluate_pair(first, second))
+
+    def test_bounded_120_record_scan_benchmark(self):
+        leads = self.Lead.create([{
+            'name': f'Benchmark Opportunity {i:03}', 'company_id': self.company.id,
+            'email_from': f'person{i:03}@unique{i:03}.example.com',
+        } for i in range(120)])
+        started = time.perf_counter()
+        results = [self.Case.with_user(self.manager).action_scan() for _ in range(3)]
+        results.append(self.Case.with_user(self.manager).action_scan())
+        elapsed = time.perf_counter() - started
+        self.assertEqual(len(leads), 120)
+        self.assertTrue(all(result['type'] == 'ir.actions.client' for result in results))
+        _logger.info('P2 bounded workload: 120 CRM records scanned in %.3f seconds across 4 bounded actions', elapsed)
