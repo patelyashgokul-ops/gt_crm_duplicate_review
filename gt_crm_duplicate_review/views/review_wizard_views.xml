@@ -11,6 +11,7 @@
                     <button name="action_not_duplicate" type="object" string="Keep Separate" class="btn-secondary"/>
                     <button name="action_approve_merge" type="object" string="Approve for Merge" class="btn-primary"/>
                     <button name="action_recheck" type="object" string="Recheck Evidence" class="btn-secondary"/>
+                    <button name="action_withdraw_approval" type="object" string="Withdraw Approval" class="btn-secondary" invisible="status != 'merge_approved'"/>
                     <button string="Cancel" special="cancel" class="btn-link"/>
                 </footer>
             </form>

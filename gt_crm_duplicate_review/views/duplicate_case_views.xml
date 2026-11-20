@@ -53,10 +53,9 @@
                     <div class="oe_button_box" name="button_box">
                         <button name="action_open_lead_a" type="object" string="Open Record A" class="oe_stat_button" icon="fa-external-link"/>
                         <button name="action_open_lead_b" type="object" string="Open Record B" class="oe_stat_button" icon="fa-external-link"/>
-                        <button name="action_refresh_evidence" type="object" string="Refresh Evidence" class="oe_stat_button" icon="fa-refresh" groups="gt_crm_duplicate_review.group_duplicate_review_manager"/>
                         <button name="action_recheck" type="object" string="Recheck Evidence" class="oe_stat_button" icon="fa-refresh" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status in ['merged', 'invalid']"/>
                         <button name="action_open_review_wizard" type="object" string="Review Decision" class="oe_stat_button" icon="fa-check-square-o" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status not in ['pending', 'stale']"/>
-                        <button name="action_open_review_wizard" type="object" string="Withdraw Approval" class="oe_stat_button" icon="fa-undo" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status != 'merge_approved'"/>
+                        <button name="action_open_review_wizard" type="object" string="Review Approval" class="oe_stat_button" icon="fa-undo" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status != 'merge_approved'"/>
                         <button name="action_open_merge_confirmation" type="object" string="Execute Approved Merge" class="oe_stat_button" icon="fa-exclamation-triangle" groups="gt_crm_duplicate_review.group_duplicate_review_manager" invisible="status != 'merge_approved'"/>
                     </div>
                     <group string="Match Summary">

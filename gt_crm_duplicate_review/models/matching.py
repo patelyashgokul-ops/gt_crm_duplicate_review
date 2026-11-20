@@ -103,9 +103,11 @@ def evaluate_pair(a, b):
         'matched_signals': evidence,
         'conflict_indicators': conflicts,
         'shared_contact': shared,
-        'fingerprint_key': (
-            a.gt_review_email_key if kind in ('email_exact', 'email_phone')
-            else '|'.join(sorted(phones_a & phones_b)) if kind == 'phone_exact'
-            else '|'.join(sorted((a.gt_review_email_key, b.gt_review_email_key)))
+        # Fingerprint all material identity keys in canonical lead order. This lets
+        # decisions notice a changed secondary phone even when email still matches.
+        'fingerprint_key': '|'.join(
+            f"{lead.id}:{lead.gt_review_email_key or ''}:{lead.gt_review_phone_key or ''}:"
+            f"{lead.gt_review_mobile_key or ''}:{lead.type}:{lead.partner_id.id or 0}:{_normalized_name(lead)}"
+            for lead in sorted((a, b), key=lambda record: record.id)
         ),
     }

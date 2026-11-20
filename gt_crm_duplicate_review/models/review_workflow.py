@@ -57,6 +57,13 @@ class DuplicateEvent(models.Model):
     def unlink(self):
         raise AccessError(_('Audit events cannot be deleted.'))
 
+    @api.model
+    def _search(self, domain, offset=0, limit=None, order=None, *, active_test=True, bypass_access=False):
+        if not self.env.su and not bypass_access:
+            visible_cases = self.env['gt.crm.duplicate.case'].search([])
+            domain = [('case_id', 'in', visible_cases.ids)] + list(domain)
+        return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
+
 
 class DuplicateCaseWorkflow(models.Model):
     _inherit = 'gt.crm.duplicate.case'
@@ -164,12 +171,14 @@ class DuplicateCaseWorkflow(models.Model):
         old_status = self.status
         if old_status == 'merged' or old_status == 'invalid':
             raise UserError(_('This case is terminal and cannot be rechecked.'))
-        try:
-            a, b, result, fingerprint = self._fresh_evaluation()
-        except UserError:
+        a, b = self._validate_pair()
+        from .matching import evaluate_pair
+        result = evaluate_pair(a, b)
+        if not result:
             self.sudo().write({'status': 'invalid', 'last_evaluated': fields.Datetime.now()})
             self._append_event('invalidated', old_status, 'invalid', _('Sources are unavailable or no actionable match remains.'))
             return True
+        fingerprint = self._fingerprint(a.id, b.id, result['match_type'], result['fingerprint_key'])
         new_status = old_status
         values = {
             'match_type': result['match_type'], 'match_score': result['match_score'],
@@ -253,6 +262,20 @@ class DuplicateCaseWorkflow(models.Model):
             'res_model': 'gt.crm.duplicate.merge.confirm.wizard', 'view_mode': 'form',
             'target': 'new', 'context': {'default_case_id': self.id},
         }
+
+    def action_withdraw_merge_approval(self, reason):
+        self.ensure_one()
+        self._require_manager()
+        self._lock_case_and_sources()
+        if self.status != 'merge_approved':
+            raise UserError(_('Only an approved merge can be withdrawn.'))
+        if len((reason or '').strip()) < 8:
+            raise ValidationError(_('Enter a meaningful reason for withdrawing approval.'))
+        self.sudo().write({'status': 'pending', 'approval_fingerprint': False,
+                           'approved_by_id': False, 'approved_at': False,
+                           'approval_reason': False, 'review_reason': reason.strip()})
+        self._append_event('approval_withdrawn', 'merge_approved', 'pending', reason.strip())
+        return True
 
     def _execute_approved_merge(self, acknowledged):
         self.ensure_one()
@@ -347,6 +370,11 @@ class DuplicateReviewWizard(models.TransientModel):
     def action_recheck(self):
         self.ensure_one()
         self.case_id.action_recheck()
+        return {'type': 'ir.actions.act_window_close'}
+
+    def action_withdraw_approval(self):
+        self.ensure_one()
+        self.case_id.action_withdraw_merge_approval(self.reason)
         return {'type': 'ir.actions.act_window_close'}
 
 
