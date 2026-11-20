@@ -118,6 +118,19 @@ class DuplicateCase(models.Model):
         raise AccessError(self.env._('Candidate cases cannot be deleted.'))
 
     @api.model
+    def _scan_notice(self, message, level='info'):
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': self.env._('CRM Duplicate Review'),
+                'message': message,
+                'type': level,
+                'sticky': level == 'warning',
+            },
+        }
+
+    @api.model
     def action_scan(self):
         if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
             raise AccessError(self.env._('Only Duplicate Review Managers may scan.'))
@@ -140,13 +153,16 @@ class DuplicateCase(models.Model):
         ], order='id', limit=size)
         if not leads:
             cursor.write({'last_lead_id': 0, 'state': 'complete'})
-            return True
+            return self._scan_notice(self.env._('The company scan is complete.'))
         for lead in leads:
             if not self._scan_lead(lead, cursor):
-                return False
+                return self._scan_notice(
+                    self.env._('Scan paused at CRM record %s because one exact-match group exceeds the safe limit.', lead.id),
+                    'warning',
+                )
             cursor.last_lead_id = lead.id
         cursor.state = 'running'
-        return True
+        return self._scan_notice(self.env._('Processed %s CRM records. Run the scan again to continue.', len(leads)))
 
     @api.model
     def _scan_lead(self, lead, cursor):

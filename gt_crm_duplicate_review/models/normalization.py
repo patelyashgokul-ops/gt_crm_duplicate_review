@@ -5,14 +5,21 @@ import re
 from odoo.addons.phone_validation.tools.phone_validation import phone_format, phone_parse
 
 
-_EMAIL = re.compile(r"^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$", re.ASCII)
+_LOCAL = re.compile(r'[A-Za-z0-9_%+-]+(?:\.[A-Za-z0-9_%+-]+)*\Z')
+_LABEL = re.compile(r'[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\Z')
 
 
 def normalize_email(value):
     if not isinstance(value, str):
         return False
     value = value.strip()
-    if not _EMAIL.fullmatch(value) or '..' in value:
+    if len(value) > 254 or value.count('@') != 1:
+        return False
+    local, domain = value.split('@')
+    labels = domain.split('.')
+    if (len(local) > 64 or not _LOCAL.fullmatch(local)
+            or len(labels) < 2 or any(len(label) > 63 or not _LABEL.fullmatch(label) for label in labels)
+            or len(labels[-1]) < 2):
         return False
     return value.casefold()
 

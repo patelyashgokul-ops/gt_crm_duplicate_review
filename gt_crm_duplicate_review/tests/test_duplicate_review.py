@@ -22,7 +22,7 @@ class TestDuplicateReview(TransactionCase):
         })
 
     def _lead(self, **values):
-        return self.Lead.create(dict(name='Duplicate test', company_id=self.company.id, **values))
+        return self.Lead.create({'name': 'Duplicate test', 'company_id': self.company.id, **values})
 
     def test_normalization(self):
         self.assertEqual(self.env.ref('gt_crm_duplicate_review.menu_duplicate_review').name, 'Duplicate Review')
@@ -30,6 +30,10 @@ class TestDuplicateReview(TransactionCase):
         self.assertEqual(normalize_email('  A.B+tag@Example.COM  '), 'a.b+tag@example.com')
         self.assertNotEqual(normalize_email('a@example.com'), normalize_email('b@example.com'))
         self.assertFalse(normalize_email('bad@'))
+        self.assertFalse(normalize_email('a,b@example.com'))
+        self.assertFalse(normalize_email('a..b@example.com'))
+        self.assertFalse(normalize_email('a@-example.com'))
+        self.assertFalse(normalize_email('a@ex\u00a0ample.com'))
         self.assertFalse(normalize_email(''))
         self.assertFalse(normalize_phone('5551234567'))
         self.assertFalse(normalize_phone('garbage'))
@@ -141,12 +145,26 @@ class TestDuplicateReview(TransactionCase):
     def test_large_group_pauses_without_claiming_completion(self):
         leads = [self._lead(email_from='group@example.com') for _ in range(4)]
         with patch.object(duplicate_case, 'GROUP_LIMIT', 2):
-            self.assertFalse(self.Case.with_user(self.manager).action_scan())
+            result = self.Case.with_user(self.manager).action_scan()
+        self.assertEqual(result['params']['type'], 'warning')
         cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)])
         self.assertEqual(cursor.state, 'blocked')
         self.assertEqual(cursor.blocked_lead_id, leads[-1].id)
         self.assertEqual(cursor.last_lead_id, leads[-2].id)
         self.assertEqual(self.Case.search_count([]), 3)
+
+    def test_configured_batch_size_and_completion(self):
+        leads = [self._lead(name=f'Unique {i}', email_from=f'unique{i}@example.com') for i in range(5)]
+        self.env['ir.config_parameter'].sudo().set_int('gt_crm_duplicate_review.batch_size', 2)
+        cursor_model = self.env['gt.crm.duplicate.scan'].sudo()
+        for expected in (leads[1].id, leads[3].id, leads[4].id):
+            result = self.Case.with_user(self.manager).action_scan()
+            self.assertEqual(result['params']['type'], 'info')
+            self.assertEqual(cursor_model.search([('company_id', '=', self.company.id)]).last_lead_id, expected)
+        self.Case.with_user(self.manager).action_scan()
+        cursor = cursor_model.search([('company_id', '=', self.company.id)])
+        self.assertEqual(cursor.state, 'complete')
+        self.assertEqual(cursor.last_lead_id, 0)
 
     def test_concurrent_scan_lock(self):
         self._lead(email_from='lock@example.com')
@@ -159,3 +177,22 @@ class TestDuplicateReview(TransactionCase):
             with self.assertRaisesRegex(Exception, 'already running'):
                 self.Case.with_user(self.manager).action_scan()
         self.assertFalse(self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)]))
+
+    def test_database_pair_constraints(self):
+        self.env.cr.execute("""
+            SELECT pg_get_constraintdef(oid)
+            FROM pg_constraint
+            WHERE conrelid = 'gt_crm_duplicate_case'::regclass
+        """)
+        definitions = [row[0] for row in self.env.cr.fetchall()]
+        self.assertTrue(any('UNIQUE (company_id, lead_a_id, lead_b_id)' in definition for definition in definitions))
+        self.assertTrue(any('lead_a_id < lead_b_id' in definition for definition in definitions))
+
+    def test_deleted_source_removes_case(self):
+        first = self._lead(email_from='deleted@example.com')
+        second = self._lead(email_from='deleted@example.com')
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
+        self.assertTrue(case)
+        second.unlink()
+        self.assertFalse(self.Case.search([('id', '=', case.id)]))
