@@ -22,8 +22,8 @@ class DuplicateCase(models.Model):
     company_id = fields.Many2one('res.company', required=True, index=True)
     lead_a_id = fields.Many2one('crm.lead', ondelete='set null', check_company=True)
     lead_b_id = fields.Many2one('crm.lead', ondelete='set null', check_company=True)
-    lead_a_original_id = fields.Integer(required=True, index=True, readonly=True)
-    lead_b_original_id = fields.Integer(required=True, index=True, readonly=True)
+    lead_a_original_id = fields.Integer(index=True, readonly=True)
+    lead_b_original_id = fields.Integer(index=True, readonly=True)
     lead_a_original_type = fields.Selection([('lead', 'Lead'), ('opportunity', 'Opportunity')], readonly=True)
     lead_b_original_type = fields.Selection([('lead', 'Lead'), ('opportunity', 'Opportunity')], readonly=True)
     match_type = fields.Selection([
@@ -94,8 +94,9 @@ class DuplicateCase(models.Model):
     lead_b_write_date = fields.Datetime(related='lead_b_id.write_date', readonly=True)
 
     _unique_pair = models.Constraint('unique(company_id, lead_a_id, lead_b_id)', 'This candidate pair already exists.')
+    _unique_original_pair = models.Constraint('unique(company_id, lead_a_original_id, lead_b_original_id)', 'This historical candidate pair already exists.')
     _ordered_pair = models.Constraint('check(lead_a_id is null or lead_b_id is null or lead_a_id < lead_b_id)', 'Candidate pairs must contain two distinct leads in canonical order.')
-    _distinct_original_pair = models.Constraint('check(lead_a_original_id < lead_b_original_id)', 'Historical source identifiers must be in canonical order.')
+    _distinct_original_pair = models.Constraint('check(lead_a_original_id is null or lead_b_original_id is null or lead_a_original_id < lead_b_original_id)', 'Historical source identifiers must be in canonical order.')
 
     @api.depends(
         'company_id', 'lead_a_id', 'lead_b_id', 'match_type', 'source_fingerprint',

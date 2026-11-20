@@ -1,0 +1,35 @@
+<odoo>
+    <record id="view_duplicate_review_wizard_form" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.review.wizard.form</field>
+        <field name="model">gt.crm.duplicate.review.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Review Duplicate Candidate">
+                <group><field name="case_id"/><field name="status"/><field name="match_type"/><field name="match_score"/></group>
+                <group string="Context"><field name="conflict_summary" nolabel="1"/></group>
+                <group string="Decision"><field name="reason_code"/><field name="reason" placeholder="Explain the decision…"/></group>
+                <footer>
+                    <button name="action_not_duplicate" type="object" string="Keep Separate" class="btn-secondary"/>
+                    <button name="action_approve_merge" type="object" string="Approve for Merge" class="btn-primary"/>
+                    <button name="action_recheck" type="object" string="Recheck Evidence" class="btn-secondary"/>
+                    <button string="Cancel" special="cancel" class="btn-link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="view_duplicate_merge_confirm_wizard_form" model="ir.ui.view">
+        <field name="name">gt.crm.duplicate.merge.confirm.wizard.form</field>
+        <field name="model">gt.crm.duplicate.merge.confirm.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirm CRM Merge">
+                <div class="alert alert-danger" role="alert">This action uses Odoo's native CRM merge. It may be irreversible. Odoo chooses the surviving record using its native ranking rules, and consolidates linked history, attachments and calendar activities. Review all conflicts before continuing.</div>
+                <group><field name="case_id"/><field name="approved_by_id"/><field name="approved_at"/><field name="approval_reason"/></group>
+                <group string="Current evidence"><field name="match_explanation"/><field name="conflict_summary"/></group>
+                <group><field name="acknowledge_irreversible" string="I understand that this CRM merge may be irreversible and may consolidate or remove source records."/></group>
+                <footer>
+                    <button name="action_confirm_merge" type="object" string="Confirm and Merge" class="btn-danger"/>
+                    <button string="Cancel" special="cancel" class="btn-link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
