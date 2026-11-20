@@ -457,6 +457,21 @@ class DuplicateScan(models.Model):
             domain = Domain(domain) & Domain('company_id', 'in', self.env.companies.ids)
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
 
+    def _check_active_company_access(self):
+        if self and not self.env.su:
+            rows = self.sudo().read(['company_id'])
+            active_company_ids = set(self.env.companies.ids)
+            if any(row['company_id'] and row['company_id'][0] not in active_company_ids for row in rows):
+                raise AccessError(self.env._('This scan history is not available in the active companies.'))
+
+    def read(self, fields=None, load='_classic_read'):
+        self._check_active_company_access()
+        return super().read(fields=fields, load=load)
+
+    def web_read(self, specification):
+        self._check_active_company_access()
+        return super().web_read(specification)
+
     @api.model_create_multi
     def create(self, vals_list):
         if not self.env.su:

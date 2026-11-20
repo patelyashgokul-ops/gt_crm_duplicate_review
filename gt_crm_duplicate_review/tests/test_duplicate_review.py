@@ -584,6 +584,8 @@ class TestDuplicateReview(TransactionCase):
         self.assertFalse(self.env['gt.crm.duplicate.scan'].with_user(self.manager).with_company(self.company).search(
             [('company_id', '=', other_company.id)],
         ))
+        with self.assertRaises(AccessError):
+            scan.with_user(self.manager).with_context(allowed_company_ids=[other_company.id]).read(['state'])
         self.assertFalse(other_company.duplicate_review_scan_enabled)
 
     def test_p4_non_system_user_cannot_start_scheduled_scans(self):
