@@ -46,7 +46,9 @@ class TestDuplicateReview(TransactionCase):
         self.Case.with_user(self.manager).action_scan()
         cases = self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])
         self.assertEqual(len(cases), 1)
-        self.assertEqual(cases.match_type, 'email')
+        self.assertEqual(cases.match_type, 'email_phone')
+        self.assertEqual(cases.match_score, 95)
+        self.assertEqual(cases.confidence_band, 'strong')
         self.Case.with_user(self.manager).action_scan()
         self.assertEqual(len(self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])), 1)
         self.assertEqual({x.id: (x.active, x.company_id.id) for x in (a, b)}, before)
@@ -85,7 +87,7 @@ class TestDuplicateReview(TransactionCase):
         self.Case.with_user(self.manager).action_scan()
         case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
         self.assertEqual(len(case), 1)
-        self.assertEqual(case.match_type, 'phone')
+        self.assertEqual(case.match_type, 'phone_exact')
         self.assertLess(case.lead_a_id.id, case.lead_b_id.id)
 
     def test_restricted_crm_user_cannot_see_case(self):
@@ -203,3 +205,44 @@ class TestDuplicateReview(TransactionCase):
         self.assertTrue(case)
         second.unlink()
         self.assertFalse(self.Case.search([('id', '=', case.id)]))
+
+    def test_conservative_near_email_and_false_positive_control(self):
+        a = self._lead(name='John Smith - Website Project', email_from='john.smith@example.com')
+        b = self._lead(name='John Smith - Website Project', email_from='john.smit@example.com')
+        c = self._lead(name='Sales Request', email_from='sales@example.com')
+        d = self._lead(name='Support Request', email_from='support@example.com')
+        self.Case.with_user(self.manager).action_scan()
+        near = self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])
+        self.assertTrue(near)
+        self.assertEqual((near.match_type, near.match_score, near.confidence_band), ('email_near', 65, 'possible'))
+        self.assertFalse(self.Case.search([('lead_a_id', '=', c.id), ('lead_b_id', '=', d.id)]))
+
+    def test_shared_contact_and_conflicts_are_explanatory(self):
+        a = self._lead(name='New ERP implementation', email_from='info@company.com', expected_revenue=1000)
+        b = self._lead(name='Support renewal', email_from='info@company.com', expected_revenue=5000, priority='3')
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])
+        self.assertTrue(case.shared_contact)
+        self.assertTrue(any('Shared contact warning' in line for line in case.matched_signals))
+        self.assertTrue(any('different' in line for line in case.conflict_indicators))
+        self.assertEqual(case.match_score, 85)
+
+    def test_restricted_user_cannot_read_queue_search_read_or_group(self):
+        a = self._lead(email_from='private@example.com', user_id=self.manager.id)
+        b = self._lead(email_from='private@example.com', user_id=self.manager.id)
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', a.id), ('lead_b_id', '=', b.id)])
+        user = self.env['res.users'].create({
+            'name': 'Queue Restricted', 'login': 'queue_restricted_test',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                    self.env.ref('sales_team.group_sale_salesman').id,
+                                    self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id])],
+        })
+        model = self.Case.with_user(user)
+        self.assertFalse(model.search_read([('id', '=', case.id)], ['match_score']))
+        self.assertFalse(model.read_group([], ['match_score:sum'], ['company_id']))
+
+    def test_near_phone_is_disabled(self):
+        first = self._lead(name='Same Contact', phone='+1 650-253-0000')
+        second = self._lead(name='Same Contact', phone='+1 650-253-0001')
+        self.assertFalse(duplicate_case.evaluate_pair(first, second))

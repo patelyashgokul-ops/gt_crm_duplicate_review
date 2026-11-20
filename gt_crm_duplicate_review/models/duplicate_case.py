@@ -3,6 +3,7 @@ import hashlib
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 from odoo.fields import Domain
+from .matching import evaluate_pair
 
 
 KEYS = ('gt_review_email_key', 'gt_review_phone_key', 'gt_review_mobile_key')
@@ -21,8 +22,17 @@ class DuplicateCase(models.Model):
     company_id = fields.Many2one('res.company', required=True, index=True)
     lead_a_id = fields.Many2one('crm.lead', required=True, ondelete='cascade', check_company=True)
     lead_b_id = fields.Many2one('crm.lead', required=True, ondelete='cascade', check_company=True)
-    match_type = fields.Selection([('email', 'Email'), ('phone', 'Phone')], required=True)
-    match_score = fields.Integer(default=100, required=True)
+    match_type = fields.Selection([
+        ('email_phone', 'Exact Email + Phone'), ('email_exact', 'Exact Email'),
+        ('phone_exact', 'Exact Phone'), ('email_near', 'Near Email'),
+    ], required=True)
+    match_score = fields.Integer(required=True)
+    confidence_band = fields.Selection([('strong', 'Strong Match'), ('review', 'Review Required'), ('possible', 'Possible Match')], required=True)
+    matched_signals = fields.Json(default=list)
+    conflict_indicators = fields.Json(default=list)
+    conflict_count = fields.Integer(compute='_compute_conflict_count')
+    shared_contact = fields.Boolean()
+    last_evaluated = fields.Datetime()
     match_explanation = fields.Char(required=True)
     status = fields.Selection(
         [('pending', 'Pending'), ('stale', 'Stale')],
@@ -40,8 +50,10 @@ class DuplicateCase(models.Model):
     @api.depends(
         'company_id', 'lead_a_id', 'lead_b_id', 'match_type', 'source_fingerprint',
         'lead_a_id.company_id', 'lead_b_id.company_id',
+        'lead_a_id.name', 'lead_b_id.name', 'lead_a_id.partner_id', 'lead_b_id.partner_id',
         'lead_a_id.active', 'lead_b_id.active',
         'lead_a_id.gt_review_email_key', 'lead_b_id.gt_review_email_key',
+        'lead_a_id.gt_review_email_domain', 'lead_b_id.gt_review_email_domain',
         'lead_a_id.gt_review_phone_key', 'lead_b_id.gt_review_phone_key',
         'lead_a_id.gt_review_mobile_key', 'lead_b_id.gt_review_mobile_key',
     )
@@ -52,23 +64,23 @@ class DuplicateCase(models.Model):
                 a and b and a.active and b.active and case.company_id
                 and a.company_id == case.company_id and b.company_id == case.company_id
             )
-            if current and case.match_type == 'email':
-                keys = {a.gt_review_email_key} & {b.gt_review_email_key}
-            elif current and case.match_type == 'phone':
-                keys = {a.gt_review_phone_key, a.gt_review_mobile_key} & {
-                    b.gt_review_phone_key, b.gt_review_mobile_key,
-                }
-            else:
-                keys = set()
-            case.evidence_current = any(
-                key and case.source_fingerprint == self._fingerprint(a.id, b.id, case.match_type, key)
-                for key in keys
+            evaluated = evaluate_pair(a, b) if current else False
+            case.evidence_current = bool(
+                evaluated and evaluated['match_type'] == case.match_type
+                and case.source_fingerprint == self._fingerprint(
+                    a.id, b.id, case.match_type, evaluated['fingerprint_key'],
+                )
             )
 
     @api.depends('evidence_current')
     def _compute_status(self):
         for case in self:
             case.status = 'pending' if case.evidence_current else 'stale'
+
+    @api.depends('conflict_indicators')
+    def _compute_conflict_count(self):
+        for case in self:
+            case.conflict_count = len(case.conflict_indicators or [])
 
     @api.model
     def _fingerprint(self, a_id, b_id, kind, key):
@@ -130,6 +142,45 @@ class DuplicateCase(models.Model):
             },
         }
 
+    def _open_source(self, field_name):
+        self.ensure_one()
+        self._check_source_access()
+        lead = self[field_name]
+        if not lead.exists():
+            raise AccessError(self.env._('This CRM record is no longer available.'))
+        lead.check_access('read')
+        return {
+            'type': 'ir.actions.act_window', 'name': lead.display_name,
+            'res_model': 'crm.lead', 'res_id': lead.id, 'view_mode': 'form',
+            'target': 'current', 'context': {'active_test': False},
+        }
+
+    def action_open_lead_a(self):
+        return self._open_source('lead_a_id')
+
+    def action_open_lead_b(self):
+        return self._open_source('lead_b_id')
+
+    def action_refresh_evidence(self):
+        self.ensure_one()
+        if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
+            raise AccessError(self.env._('Only Duplicate Review Managers may refresh matching evidence.'))
+        self._check_source_access()
+        a, b = self.lead_a_id, self.lead_b_id
+        result = evaluate_pair(a, b) if a.exists() and b.exists() else False
+        if not result:
+            self.sudo().write({'source_fingerprint': 'stale', 'last_evaluated': fields.Datetime.now()})
+            return self._scan_notice(self.env._('No actionable match remains. This case is now stale.'), 'warning')
+        self.sudo().write({
+            'match_type': result['match_type'], 'match_score': result['match_score'],
+            'confidence_band': result['confidence_band'], 'matched_signals': result['matched_signals'],
+            'conflict_indicators': result['conflict_indicators'], 'shared_contact': result['shared_contact'],
+            'match_explanation': '; '.join(result['matched_signals']),
+            'source_fingerprint': self._fingerprint(a.id, b.id, result['match_type'], result['fingerprint_key']),
+            'last_evaluated': fields.Datetime.now(),
+        })
+        return self._scan_notice(self.env._('Matching evidence has been refreshed.'))
+
     @api.model
     def action_scan(self):
         if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
@@ -149,7 +200,8 @@ class DuplicateCase(models.Model):
         size = self.env['ir.config_parameter'].sudo().get_int('gt_crm_duplicate_review.batch_size', DEFAULT_BATCH_SIZE)
         size = max(1, min(size, MAX_BATCH_SIZE))
         leads = self.env['crm.lead'].sudo().search([
-            ('company_id', '=', company.id), ('active', '=', True), ('id', '>', cursor.last_lead_id),
+            ('company_id', '=', company.id), ('active', '=', True), ('lost_reason_id', '=', False),
+            ('id', '>', cursor.last_lead_id),
         ], order='id', limit=size)
         if not leads:
             cursor.write({'last_lead_id': 0, 'state': 'complete'})
@@ -172,33 +224,40 @@ class DuplicateCase(models.Model):
             key = lead[field]
             if not key:
                 continue
-            other_fields = ('gt_review_email_key',) if field == 'gt_review_email_key' else ('gt_review_phone_key', 'gt_review_mobile_key')
-            for other_field in other_fields:
-                matches = self.env['crm.lead'].sudo().search([
-                    ('company_id', '=', lead.company_id.id), ('active', '=', True),
-                    ('id', '<', lead.id), (other_field, '=', key),
-                ], order='id', limit=GROUP_LIMIT + 1)
-                if len(matches) > GROUP_LIMIT:
-                    cursor.write({'state': 'blocked', 'blocked_lead_id': lead.id})
-                    return False
-                for other in matches:
-                    a, b = sorted((lead.id, other.id))
-                    case = self.sudo().search([('company_id', '=', lead.company_id.id), ('lead_a_id', '=', a), ('lead_b_id', '=', b)], limit=1)
-                    kind = 'email' if field == 'gt_review_email_key' else 'phone'
-                    digest = self._fingerprint(a, b, kind, key)
-                    if case:
-                        if not case.evidence_current:
-                            case.write({
-                                'match_type': kind,
-                                'match_explanation': self.env._('Exact normalized %s match', kind),
-                                'source_fingerprint': digest,
-                            })
-                        continue
-                    self.sudo().create({
-                        'company_id': lead.company_id.id, 'lead_a_id': a, 'lead_b_id': b,
-                        'match_type': kind, 'match_explanation': self.env._('Exact normalized %s match', kind),
-                        'source_fingerprint': digest,
-                    })
+            if field == 'gt_review_email_key':
+                candidate_domain = ['|', ('gt_review_email_key', '=', key), ('gt_review_email_domain', '=', lead.gt_review_email_domain)]
+            else:
+                candidate_domain = ['|', ('gt_review_phone_key', '=', key), ('gt_review_mobile_key', '=', key)]
+            matches = self.env['crm.lead'].sudo().search([
+                ('company_id', '=', lead.company_id.id), ('active', '=', True),
+                ('lost_reason_id', '=', False),
+                ('id', '<', lead.id), *candidate_domain,
+            ], order='id', limit=GROUP_LIMIT + 1)
+            if len(matches) > GROUP_LIMIT:
+                cursor.write({'state': 'blocked', 'blocked_lead_id': lead.id})
+                return False
+            for other in matches:
+                evaluated = evaluate_pair(lead, other)
+                if not evaluated:
+                    continue
+                a, b = sorted((lead.id, other.id))
+                digest = self._fingerprint(a, b, evaluated['match_type'], evaluated['fingerprint_key'])
+                values = {
+                    'match_type': evaluated['match_type'], 'match_score': evaluated['match_score'],
+                    'confidence_band': evaluated['confidence_band'], 'matched_signals': evaluated['matched_signals'],
+                    'conflict_indicators': evaluated['conflict_indicators'], 'shared_contact': evaluated['shared_contact'],
+                    'match_explanation': '; '.join(evaluated['matched_signals']), 'source_fingerprint': digest,
+                    'last_evaluated': fields.Datetime.now(),
+                }
+                case = self.sudo().search([('company_id', '=', lead.company_id.id), ('lead_a_id', '=', a), ('lead_b_id', '=', b)], limit=1)
+                if case:
+                    if case.status == 'stale':
+                        case.write(values)
+                    else:
+                        case.write(values)
+                else:
+                    values.update({'company_id': lead.company_id.id, 'lead_a_id': a, 'lead_b_id': b})
+                    self.sudo().create(values)
         return True
 
 
