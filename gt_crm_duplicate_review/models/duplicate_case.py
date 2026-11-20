@@ -160,6 +160,7 @@ class DuplicateCase(models.Model):
                 Domain('status', 'in', ['merged', 'invalid']) & (
                     (Domain('lead_a_id', 'in', readable) & Domain('lead_b_id', '=', False))
                     | (Domain('lead_a_id', '=', False) & Domain('lead_b_id', 'in', readable))
+                    | (Domain('lead_a_id', '=', False) & Domain('lead_b_id', '=', False))
                 )
             )
             domain = Domain(domain) & visible_pair

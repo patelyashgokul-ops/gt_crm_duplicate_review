@@ -165,6 +165,23 @@ class TestDuplicateReview(TransactionCase):
         with self.assertRaises(AccessError):
             event.unlink()
 
+    def test_p3_wizard_case_binding_and_manager_authorization(self):
+        a = self._lead(email_from='wizard-a@example.test')
+        b = self._lead(email_from='wizard-a@example.test')
+        case = self._candidate_case(a, b)
+        wizard = self.env['gt.crm.duplicate.review.wizard'].with_user(self.manager).create({'case_id': case.id})
+        other_a = self._lead(email_from='wizard-b@example.test')
+        other_b = self._lead(email_from='wizard-b@example.test')
+        other_case = self._candidate_case(other_a, other_b)
+        with self.assertRaises(AccessError):
+            wizard.write({'case_id': other_case.id})
+        ordinary_user = self.env['res.users'].create({
+            'name': 'Ordinary CRM User', 'login': 'ordinary_p3_review_user',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
+        })
+        with self.assertRaises(AccessError):
+            self.env['gt.crm.duplicate.review.wizard'].with_user(ordinary_user).create({'case_id': case.id})
+
     def test_exact_match_and_repeat(self):
         a = self._lead(email_from='First@Example.com', phone='+1 650-253-0000')
         b = self._lead(email_from=' first@example.com ', mobile='+1 (650) 253-0000')

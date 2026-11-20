@@ -423,6 +423,23 @@ class DuplicateReviewWizard(models.TransientModel):
     ])
     reason = fields.Text()
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.user.has_group(MANAGER_GROUP):
+            raise AccessError(_('Only Duplicate Review Managers may create review wizards.'))
+        for vals in vals_list:
+            case = self.env['gt.crm.duplicate.case'].browse(vals.get('case_id')).exists()
+            if not case:
+                raise AccessError(_('This duplicate case is not available.'))
+            case.check_access('read')
+            case._check_source_access()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if 'case_id' in vals:
+            raise AccessError(_('The case attached to a review wizard cannot be changed.'))
+        return super().write(vals)
+
     def action_not_duplicate(self):
         self.ensure_one()
         self.case_id._decide_not_duplicate(self.reason_code, self.reason)
@@ -455,6 +472,23 @@ class DuplicateMergeConfirmWizard(models.TransientModel):
     match_explanation = fields.Char(related='case_id.match_explanation', readonly=True)
     conflict_summary = fields.Text(related='case_id.conflict_summary', readonly=True)
     acknowledge_irreversible = fields.Boolean(required=True, default=False)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.user.has_group(MANAGER_GROUP):
+            raise AccessError(_('Only Duplicate Review Managers may create merge confirmations.'))
+        for vals in vals_list:
+            case = self.env['gt.crm.duplicate.case'].browse(vals.get('case_id')).exists()
+            if not case:
+                raise AccessError(_('This duplicate case is not available.'))
+            case.check_access('read')
+            case._check_source_access()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if 'case_id' in vals:
+            raise AccessError(_('The case attached to a merge confirmation cannot be changed.'))
+        return super().write(vals)
 
     def action_confirm_merge(self):
         self.ensure_one()
