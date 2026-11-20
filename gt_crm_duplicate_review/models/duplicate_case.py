@@ -230,6 +230,8 @@ class DuplicateCase(models.Model):
             cursor = self.env['gt.crm.duplicate.scan'].sudo().create({'company_id': company.id})
         if cursor.state == 'blocked':
             cursor.write({'state': 'running', 'blocked_lead_id': 0})
+        elif cursor.state == 'complete':
+            cursor.write({'state': 'running', 'fuzzy_truncated': False})
         size = self.env['ir.config_parameter'].sudo().get_int('gt_crm_duplicate_review.batch_size', DEFAULT_BATCH_SIZE)
         size = max(1, min(size, MAX_BATCH_SIZE))
         leads = self.env['crm.lead'].sudo().search([
@@ -238,7 +240,9 @@ class DuplicateCase(models.Model):
         ], order='id', limit=size)
         if not leads:
             cursor.write({'last_lead_id': 0, 'state': 'complete'})
-            return self._scan_notice(self.env._('The company scan is complete.'))
+            message = (self.env._('Exact matching is complete. Near-email coverage was limited for broad domains.')
+                       if cursor.fuzzy_truncated else self.env._('The company scan is complete.'))
+            return self._scan_notice(message, 'warning' if cursor.fuzzy_truncated else 'info')
         for lead in leads:
             if not self._scan_lead(lead, cursor):
                 return self._scan_notice(
@@ -247,7 +251,10 @@ class DuplicateCase(models.Model):
                 )
             cursor.last_lead_id = lead.id
         cursor.state = 'running'
-        return self._scan_notice(self.env._('Processed %s CRM records. Run the scan again to continue.', len(leads)))
+        message = self.env._('Processed %s CRM records. Run the scan again to continue.', len(leads))
+        if cursor.fuzzy_truncated:
+            message += ' ' + self.env._('Near-email candidates were capped for at least one broad domain.')
+        return self._scan_notice(message, 'warning' if cursor.fuzzy_truncated else 'info')
 
     @api.model
     def _scan_lead(self, lead, cursor):
@@ -257,19 +264,30 @@ class DuplicateCase(models.Model):
             key = lead[field]
             if not key:
                 continue
-            if field == 'gt_review_email_key':
-                candidate_domain = ['|', ('gt_review_email_key', '=', key), ('gt_review_email_domain', '=', lead.gt_review_email_domain)]
-            else:
-                candidate_domain = ['|', ('gt_review_phone_key', '=', key), ('gt_review_mobile_key', '=', key)]
-            matches = self.env['crm.lead'].sudo().search([
+            exact_domain = [('gt_review_email_key', '=', key)] if field == 'gt_review_email_key' else [
+                '|', ('gt_review_phone_key', '=', key), ('gt_review_mobile_key', '=', key),
+            ]
+            base_domain = [
                 ('company_id', '=', lead.company_id.id), ('active', '=', True),
-                ('lost_reason_id', '=', False),
-                ('id', '<', lead.id), *candidate_domain,
-            ], order='id', limit=GROUP_LIMIT + 1)
-            if len(matches) > GROUP_LIMIT:
+                ('lost_reason_id', '=', False), ('id', '<', lead.id),
+            ]
+            exact = self.env['crm.lead'].sudo().search(
+                base_domain + exact_domain, order='id', limit=GROUP_LIMIT + 1,
+            )
+            if len(exact) > GROUP_LIMIT:
                 cursor.write({'state': 'blocked', 'blocked_lead_id': lead.id})
                 return False
-            for other in matches:
+            candidates = {record.id: record for record in exact}
+            if field == 'gt_review_email_key' and lead.gt_review_email_domain:
+                near = self.env['crm.lead'].sudo().search(base_domain + [
+                    ('gt_review_email_domain', '=', lead.gt_review_email_domain),
+                    ('id', 'not in', list(candidates)),
+                ], order='id', limit=GROUP_LIMIT + 1)
+                if len(near) > GROUP_LIMIT:
+                    cursor.fuzzy_truncated = True
+                else:
+                    candidates.update({record.id: record for record in near})
+            for other in candidates.values():
                 evaluated = evaluate_pair(lead, other)
                 if not evaluated:
                     continue
@@ -301,6 +319,7 @@ class DuplicateScan(models.Model):
     company_id = fields.Many2one('res.company', required=True, index=True)
     last_lead_id = fields.Integer(default=0)
     blocked_lead_id = fields.Integer()
+    fuzzy_truncated = fields.Boolean(default=False)
     state = fields.Selection([('running', 'Running'), ('complete', 'Complete'), ('blocked', 'Blocked')], default='running', required=True)
 
     _unique_company = models.Constraint('unique(company_id)', 'Only one scan cursor may exist per company.')

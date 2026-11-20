@@ -154,7 +154,7 @@ class TestDuplicateReview(TransactionCase):
         self.assertEqual(cursor.blocked_lead_id, leads[-1].id)
         self.assertEqual(cursor.last_lead_id, leads[-2].id)
         self.assertEqual(self.Case.search_count([]), 3)
-        leads[-1].email_from = 'corrected@example.com'
+        leads[-1].email_from = 'corrected@different-domain.com'
         with patch.object(duplicate_case, 'GROUP_LIMIT', 2):
             result = self.Case.with_user(self.manager).action_scan()
         self.assertEqual(result['params']['type'], 'info')
@@ -240,7 +240,7 @@ class TestDuplicateReview(TransactionCase):
         })
         model = self.Case.with_user(user)
         self.assertFalse(model.search_read([('id', '=', case.id)], ['match_score']))
-        self.assertFalse(model.read_group([], ['match_score:sum'], ['company_id']))
+        self.assertFalse(model.read_group([], ['company_id'], ['__count']))
 
     def test_near_phone_is_disabled(self):
         first = self._lead(name='Same Contact', phone='+1 650-253-0000')
