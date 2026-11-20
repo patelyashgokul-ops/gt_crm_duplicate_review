@@ -1,6 +1,6 @@
 import hashlib
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 from odoo.fields import Domain
 
@@ -36,7 +36,7 @@ class DuplicateCase(models.Model):
     def _check_pair_company(self):
         for case in self:
             if not case.lead_a_id.company_id or case.lead_a_id.company_id != case.company_id or case.lead_b_id.company_id != case.company_id:
-                raise ValidationError(_('Both CRM records must belong to the case company.'))
+                raise ValidationError(self.env._('Both CRM records must belong to the case company.'))
 
     @api.model
     def _search(self, domain, offset=0, limit=None, order=None, *, active_test=True, bypass_access=False):
@@ -49,28 +49,28 @@ class DuplicateCase(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         if not self.env.su:
-            raise AccessError(_('Candidate creation is reserved for the internal scanner.'))
+            raise AccessError(self.env._('Candidate creation is reserved for the internal scanner.'))
         return super().create(vals_list)
 
     def write(self, vals):
         if not self.env.su:
-            raise AccessError(_('Candidate evidence is read only.'))
+            raise AccessError(self.env._('Candidate evidence is read only.'))
         return super().write(vals)
 
     def unlink(self):
-        raise AccessError(_('Candidate cases cannot be deleted.'))
+        raise AccessError(self.env._('Candidate cases cannot be deleted.'))
 
     @api.model
     def action_scan(self):
         if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
-            raise AccessError(_('Only Duplicate Review Managers may scan.'))
+            raise AccessError(self.env._('Only Duplicate Review Managers may scan.'))
         company = self.env.company
         cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', company.id)], limit=1)
         if not cursor:
             cursor = self.env['gt.crm.duplicate.scan'].sudo().create({'company_id': company.id})
         if cursor.state == 'blocked':
-            raise ValidationError(_('Scan is paused: a matching group exceeded the safe group limit.'))
-        size = int(self.env['ir.config_parameter'].sudo().get_param('gt_crm_duplicate_review.batch_size', DEFAULT_BATCH_SIZE))
+            raise ValidationError(self.env._('Scan is paused: a matching group exceeded the safe group limit.'))
+        size = self.env['ir.config_parameter'].sudo().get_int('gt_crm_duplicate_review.batch_size', DEFAULT_BATCH_SIZE)
         size = max(1, min(size, MAX_BATCH_SIZE))
         leads = self.env['crm.lead'].sudo().search([
             ('company_id', '=', company.id), ('active', '=', True), ('id', '>', cursor.last_lead_id),
@@ -88,7 +88,7 @@ class DuplicateCase(models.Model):
     @api.model
     def _scan_lead(self, lead, cursor):
         if not self.env.su and not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
-            raise AccessError(_('Only Duplicate Review Managers may scan.'))
+            raise AccessError(self.env._('Only Duplicate Review Managers may scan.'))
         for field in KEYS:
             key = lead[field]
             if not key:
@@ -111,7 +111,7 @@ class DuplicateCase(models.Model):
                     digest = hashlib.sha256(('%s:%s:%s:%s' % (a, b, kind, key)).encode()).hexdigest()
                     self.sudo().create({
                         'company_id': lead.company_id.id, 'lead_a_id': a, 'lead_b_id': b,
-                        'match_type': kind, 'match_explanation': _('Exact normalized %s match') % kind,
+                        'match_type': kind, 'match_explanation': self.env._('Exact normalized %s match', kind),
                         'source_fingerprint': digest,
                     })
         return True

@@ -61,3 +61,37 @@ class TestDuplicateReview(TransactionCase):
             self.Case.with_user(user).action_scan()
         with self.assertRaises(AccessError):
             self.Case.with_user(user).create({'company_id': self.company.id})
+
+    def test_phone_mobile_pair_and_canonical_order(self):
+        first = self._lead(phone='+1 650-253-0000')
+        second = self._lead(mobile='+1 650 253 0000')
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
+        self.assertEqual(len(case), 1)
+        self.assertEqual(case.match_type, 'phone')
+        self.assertLess(case.lead_a_id.id, case.lead_b_id.id)
+
+    def test_restricted_crm_user_cannot_see_case(self):
+        first = self._lead(email_from='restricted@example.com', user_id=self.manager.id)
+        second = self._lead(email_from='restricted@example.com', user_id=self.manager.id)
+        self.Case.with_user(self.manager).action_scan()
+        case = self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)])
+        self.assertTrue(case)
+        user = self.env['res.users'].create({
+            'name': 'Personal CRM Reviewer', 'login': 'personal_reviewer_test',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                    self.env.ref('sales_team.group_sale_salesman').id,
+                                    self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id])],
+        })
+        self.assertEqual(self.Case.with_user(user).search_count([('id', '=', case.id)]), 0)
+
+    def test_scan_rollback(self):
+        first = self._lead(email_from='rollback@example.com')
+        second = self._lead(email_from='rollback@example.com')
+        try:
+            with self.env.cr.savepoint():
+                self.Case.with_user(self.manager).action_scan()
+                raise RuntimeError('test rollback')
+        except RuntimeError:
+            pass
+        self.assertFalse(self.Case.search([('lead_a_id', '=', first.id), ('lead_b_id', '=', second.id)]))
