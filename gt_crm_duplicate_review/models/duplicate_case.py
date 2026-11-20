@@ -341,7 +341,7 @@ class DuplicateCase(models.Model):
                 ], order='id', limit=GROUP_LIMIT + 1)
                 if len(near) > GROUP_LIMIT:
                     cursor.fuzzy_truncated = True
-                cursor.incomplete_groups += 1
+                    cursor.incomplete_groups += 1
                 else:
                     candidates.update({record.id: record for record in near})
             for other in candidates.values():

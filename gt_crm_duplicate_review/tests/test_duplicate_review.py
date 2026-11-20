@@ -488,3 +488,79 @@ class TestDuplicateReview(TransactionCase):
         self.assertEqual(len(leads), 120)
         self.assertTrue(all(result['type'] == 'ir.actions.client' for result in results))
         _logger.info('P2 bounded workload: 120 CRM records scanned in %.3f seconds across 4 bounded actions', elapsed)
+
+    def test_p4_dashboard_counts_and_actions_are_source_and_company_scoped(self):
+        a, b = self._lead(email_from='dashboard@example.test'), self._lead(email_from='dashboard@example.test')
+        visible = self._candidate_case(a, b)
+        other_company = self.env['res.company'].create({'name': 'Dashboard hidden company'})
+        other_leads = self.Lead.create([
+            {'name': 'Hidden dashboard A', 'company_id': other_company.id, 'email_from': 'hidden@example.test'},
+            {'name': 'Hidden dashboard B', 'company_id': other_company.id, 'email_from': 'hidden@example.test'},
+        ])
+        hidden = self._candidate_case(other_leads[0], other_leads[1])
+        dashboard_model = self.env['gt.crm.duplicate.dashboard'].with_user(self.manager).with_company(self.company)
+        dashboard = dashboard_model.create({'pending_count': 999999, 'merged_count': 999999})
+        self.assertEqual(dashboard.pending_count, 1)
+        self.assertEqual(dashboard.merged_count, 0)
+        action = dashboard.action_pending()
+        visible_cases = self.Case.with_user(self.manager).with_company(self.company).search(action['domain'])
+        self.assertEqual(visible_cases.ids, [visible.id])
+        self.assertNotIn(hidden.id, visible_cases.ids)
+        with self.assertRaises(AccessError):
+            dashboard.write({'pending_count': 0})
+
+    def test_p4_dashboard_respects_active_multi_company_scope_and_group(self):
+        company_b = self.env['res.company'].create({'name': 'Dashboard company B'})
+        manager_ab = self.env['res.users'].create({
+            'name': 'Dashboard AB Manager', 'login': 'dashboard_ab_manager',
+            'company_id': self.company.id, 'company_ids': [(6, 0, [self.company.id, company_b.id])],
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                  self.env.ref('sales_team.group_sale_manager').id,
+                                  self.env.ref('gt_crm_duplicate_review.group_duplicate_review_manager').id])],
+        })
+        a1, a2 = self._lead(email_from='dashboard-a@example.test'), self._lead(email_from='dashboard-a@example.test')
+        b1, b2 = self.Lead.create([
+            {'name': 'Dashboard B1', 'company_id': company_b.id, 'email_from': 'dashboard-b@example.test'},
+            {'name': 'Dashboard B2', 'company_id': company_b.id, 'email_from': 'dashboard-b@example.test'},
+        ])
+        self._candidate_case(a1, a2)
+        self._candidate_case(b1, b2)
+        scoped_a = self.env['gt.crm.duplicate.dashboard'].with_user(manager_ab).with_context(
+            allowed_company_ids=[self.company.id],
+        ).create({})
+        both = self.env['gt.crm.duplicate.dashboard'].with_user(manager_ab).with_context(
+            allowed_company_ids=[self.company.id, company_b.id],
+        ).create({})
+        self.assertEqual(scoped_a.pending_count, 1)
+        self.assertEqual(both.pending_count, 2)
+        ordinary = self.env['res.users'].create({
+            'name': 'No dashboard group', 'login': 'p4_no_dashboard',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
+        })
+        with self.assertRaises(AccessError):
+            self.env['gt.crm.duplicate.dashboard'].with_user(ordinary).create({})
+
+    def test_p4_scan_progress_is_read_only_company_scoped_and_partial_is_explicit(self):
+        self._lead(name='Scan progress fixture', email_from='progress@example.test')
+        result = self.Case.with_user(self.manager).action_scan()
+        self.assertEqual(result['params']['type'], 'info')
+        scan = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)])
+        self.assertTrue(scan.records_evaluated)
+        with self.assertRaises(AccessError):
+            scan.with_user(self.manager).write({'state': 'complete'})
+        with self.assertRaises(AccessError):
+            scan.with_user(self.manager).unlink()
+        other_company = self.env['res.company'].create({'name': 'Scan progress hidden company'})
+        self.assertFalse(self.env['gt.crm.duplicate.scan'].with_user(self.manager).with_company(self.company).search(
+            [('company_id', '=', other_company.id)],
+        ))
+        self.assertFalse(other_company.duplicate_review_scan_enabled)
+
+    def test_p4_non_system_user_cannot_start_scheduled_scans(self):
+        ordinary = self.env['res.users'].create({
+            'name': 'Unauthorized Cron Invoker', 'login': 'p4_cron_denied',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                  self.env.ref('gt_crm_duplicate_review.group_duplicate_review_manager').id])],
+        })
+        with self.assertRaises(AccessError):
+            self.Case.with_user(ordinary)._cron_scan_enabled_companies()
