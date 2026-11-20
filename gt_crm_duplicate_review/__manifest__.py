@@ -1,4 +1,4 @@
-﻿{
+{
     'name': 'CRM Duplicate Review',
     'version': '20.0.5.0.0',
     'summary': 'Securely review CRM lead and opportunity duplicate candidates',
