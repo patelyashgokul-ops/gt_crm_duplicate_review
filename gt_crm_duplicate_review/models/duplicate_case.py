@@ -248,16 +248,18 @@ class DuplicateCase(models.Model):
         company = self.env.company
         if company not in self.env.user.company_ids:
             raise AccessError(self.env._('You are not authorized to scan this company.'))
-        return self._run_company_scan_batch(company)
+        return self._run_company_scan_batch(company, raise_if_locked=True)
 
     @api.model
-    def _run_company_scan_batch(self, company):
+    def _run_company_scan_batch(self, company, raise_if_locked=False):
         """Run one bounded batch for an explicitly authorized company."""
         self.env.cr.execute(
             'SELECT pg_try_advisory_xact_lock(%s, %s)',
             (SCAN_LOCK_NAMESPACE, company.id),
         )
         if not self.env.cr.fetchone()[0]:
+            if raise_if_locked:
+                raise ValidationError(self.env._('A duplicate scan is already running for this company.'))
             return self._scan_notice(self.env._('A duplicate scan is already running for this company.'), 'warning')
         cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', company.id)], limit=1)
         if not cursor:

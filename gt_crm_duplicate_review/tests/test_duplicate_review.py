@@ -49,10 +49,11 @@ class TestDuplicateReview(TransactionCase):
     def _candidate_case(self, lead_a, lead_b):
         from ..models.matching import evaluate_pair
         a, b = sorted((lead_a, lead_b), key=lambda lead: lead.id)
+        self.assertEqual(a.company_id, b.company_id)
         result = evaluate_pair(a, b)
         self.assertTrue(result)
         return self.Case.sudo().create({
-            'company_id': self.company.id, 'lead_a_id': a.id, 'lead_b_id': b.id,
+            'company_id': a.company_id.id, 'lead_a_id': a.id, 'lead_b_id': b.id,
             'match_type': result['match_type'], 'match_score': result['match_score'],
             'confidence_band': result['confidence_band'], 'matched_signals': result['matched_signals'],
             'conflict_indicators': result['conflict_indicators'], 'shared_contact': result['shared_contact'],
