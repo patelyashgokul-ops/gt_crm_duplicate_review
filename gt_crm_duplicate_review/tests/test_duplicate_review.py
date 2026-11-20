@@ -4,6 +4,8 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from unittest.mock import patch
 import logging
 import time
+import importlib.util
+from pathlib import Path
 
 from ..models.normalization import normalize_email, normalize_phone
 from ..models import duplicate_case
@@ -181,6 +183,25 @@ class TestDuplicateReview(TransactionCase):
         })
         with self.assertRaises(AccessError):
             self.env['gt.crm.duplicate.review.wizard'].with_user(ordinary_user).create({'case_id': case.id})
+
+    def test_p3_upgrade_migration_backfills_populated_case_history(self):
+        a = self._lead(email_from='migration@example.test')
+        b = self._lead(email_from='migration@example.test')
+        case = self._candidate_case(a, b)
+        self.env.cr.execute(
+            'UPDATE gt_crm_duplicate_case SET lead_a_original_id = NULL, lead_b_original_id = NULL, '
+            'lead_a_original_type = NULL, lead_b_original_type = NULL WHERE id = %s',
+            (case.id,),
+        )
+        case.invalidate_recordset()
+        migration_path = Path(__file__).resolve().parent.parent / 'migrations' / '20.0.3.0.0' / 'post-migration.py'
+        spec = importlib.util.spec_from_file_location('gt_crm_duplicate_review_p3_migration', migration_path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        migration.migrate(self.env.cr, '20.0.2.0.0')
+        case.invalidate_recordset()
+        self.assertEqual((case.lead_a_original_id, case.lead_b_original_id), (a.id, b.id))
+        self.assertEqual((case.lead_a_original_type, case.lead_b_original_type), (a.type, b.type))
 
     def test_exact_match_and_repeat(self):
         a = self._lead(email_from='First@Example.com', phone='+1 650-253-0000')
