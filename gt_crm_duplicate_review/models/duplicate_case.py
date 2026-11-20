@@ -27,9 +27,9 @@ class DuplicateCase(models.Model):
         ('phone_exact', 'Exact Phone'), ('email_near', 'Near Email'),
     ], required=True)
     match_score = fields.Integer(required=True)
-    confidence_band = fields.Selection([('strong', 'Strong Match'), ('review', 'Review Required'), ('possible', 'Possible Match')], required=True)
-    matched_signals = fields.Json(default=list)
-    conflict_indicators = fields.Json(default=list)
+    confidence_band = fields.Selection([('strong', 'Strong Match'), ('review', 'Review Required'), ('possible', 'Possible Match')], required=True, default='review')
+    matched_signals = fields.Json(default=lambda self: [])
+    conflict_indicators = fields.Json(default=lambda self: [])
     conflict_count = fields.Integer(compute='_compute_conflict_count')
     shared_contact = fields.Boolean()
     last_evaluated = fields.Datetime()

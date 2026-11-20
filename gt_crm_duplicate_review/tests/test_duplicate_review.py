@@ -65,6 +65,40 @@ class TestDuplicateReview(TransactionCase):
         self.Case.with_user(self.manager).action_scan()
         self.assertFalse(self.Case.search([('lead_a_id', '=', a.id)]))
 
+    def test_company_a_b_scope_and_restricted_reviewers(self):
+        company_a = self.company
+        company_b = self.env['res.company'].create({'name': 'Company B Review Test'})
+        manager = self.manager.sudo().with_context(allowed_company_ids=[company_a.id, company_b.id])
+        manager.write({'company_ids': [(6, 0, [company_a.id, company_b.id])]})
+        a1, a2 = self.Lead.create([
+            {'name': 'A opportunity 1', 'company_id': company_a.id, 'email_from': 'shared@both.test'},
+            {'name': 'A opportunity 2', 'company_id': company_a.id, 'email_from': 'shared@both.test'},
+        ])
+        b1, b2 = self.Lead.create([
+            {'name': 'B opportunity 1', 'company_id': company_b.id, 'email_from': 'shared@both.test'},
+            {'name': 'B opportunity 2', 'company_id': company_b.id, 'email_from': 'shared@both.test'},
+        ])
+        self.Case.with_user(manager).with_company(company_a).action_scan()
+        self.Case.with_user(manager).with_company(company_b).action_scan()
+        case_a = self.Case.sudo().search([('lead_a_id', '=', a1.id), ('lead_b_id', '=', a2.id)])
+        case_b = self.Case.sudo().search([('lead_a_id', '=', b1.id), ('lead_b_id', '=', b2.id)])
+        self.assertTrue(case_a and case_b)
+        self.assertFalse(self.Case.sudo().search([('lead_a_id', 'in', [a1.id, a2.id]), ('lead_b_id', 'in', [b1.id, b2.id])]))
+        for company, visible_case, hidden_case, login in (
+            (company_a, case_a, case_b, 'company_a_reviewer'),
+            (company_b, case_b, case_a, 'company_b_reviewer'),
+        ):
+            reviewer = self.env['res.users'].create({
+                'name': login, 'login': login, 'company_id': company.id,
+                'company_ids': [(6, 0, [company.id])],
+                'group_ids': [(6, 0, [self.env.ref('base.group_user').id,
+                                      self.env.ref('sales_team.group_sale_manager').id,
+                                      self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id])],
+            })
+            scoped = self.Case.with_user(reviewer).with_company(company)
+            self.assertEqual(scoped.search_count([('id', '=', visible_case.id)]), 1)
+            self.assertEqual(scoped.search_count([('id', '=', hidden_case.id)]), 0)
+
     def test_company_less_lead_is_not_paired(self):
         self._lead(email_from='nocompany@example.com')
         without_company = self.Lead.create({'name': 'Company-less', 'company_id': False,
