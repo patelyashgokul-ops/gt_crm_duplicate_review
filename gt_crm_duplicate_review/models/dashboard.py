@@ -11,16 +11,16 @@ class DuplicateReviewDashboard(models.TransientModel):
     _name = 'gt.crm.duplicate.dashboard'
     _description = 'CRM Duplicate Review Dashboard'
 
-    pending_count = fields.Integer(readonly=True)
-    strong_count = fields.Integer(readonly=True)
-    possible_count = fields.Integer(readonly=True)
-    merge_approved_count = fields.Integer(readonly=True)
-    merged_count = fields.Integer(readonly=True)
-    not_duplicate_count = fields.Integer(readonly=True)
-    stale_count = fields.Integer(readonly=True)
-    invalid_count = fields.Integer(readonly=True)
-    conflict_count = fields.Integer(readonly=True)
-    recent_scan_status = fields.Char(readonly=True)
+    pending_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    strong_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    possible_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    merge_approved_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    merged_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    not_duplicate_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    stale_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    invalid_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    conflict_count = fields.Integer(compute='_compute_metrics', readonly=True)
+    recent_scan_status = fields.Char(compute='_compute_metrics', readonly=True)
 
     @api.model
     def _dashboard_values(self):
@@ -50,19 +50,20 @@ class DuplicateReviewDashboard(models.TransientModel):
             'recent_scan_status': latest_scan.state if latest_scan else _('No scan yet'),
         }
 
+    @api.depends_context('uid', 'allowed_company_ids')
+    def _compute_metrics(self):
+        values = self._dashboard_values()
+        for dashboard in self:
+            for name, value in values.items():
+                dashboard[name] = value
+
     @api.model_create_multi
     def create(self, vals_list):
         if not self.env.user.has_group(REVIEW_GROUP):
             raise AccessError(_('You are not allowed to create a Duplicate Review dashboard.'))
-        values = self._dashboard_values()
-        return super().create([dict(values) for _vals in vals_list])
-
-    @api.model
-    def default_get(self, fields_list):
-        defaults = super().default_get(fields_list)
-        if self.env.user.has_group(REVIEW_GROUP):
-            defaults.update(self._dashboard_values())
-        return defaults
+        # Metrics are computed on read under the caller's current CRM rules;
+        # never persist or accept client-supplied counter values.
+        return super().create([{} for _vals in vals_list])
 
     def write(self, vals):
         raise AccessError(_('Dashboard metrics are read only.'))
@@ -82,7 +83,8 @@ class DuplicateReviewDashboard(models.TransientModel):
         self.ensure_one()
         if not self.env.user.has_group(REVIEW_GROUP):
             raise AccessError(_('You are not allowed to view Duplicate Review metrics.'))
-        return super(DuplicateReviewDashboard, self).write(self._dashboard_values())
+        self.invalidate_recordset()
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
 
     def _open_cases(self, key):
         self.ensure_one()
