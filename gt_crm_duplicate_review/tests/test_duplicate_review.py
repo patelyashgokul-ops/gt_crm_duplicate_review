@@ -504,8 +504,12 @@ class TestDuplicateReview(TransactionCase):
         _logger.info('P2 bounded workload: 120 CRM records scanned in %.3f seconds across 4 bounded actions', elapsed)
 
     def test_p4_dashboard_counts_and_actions_are_source_and_company_scoped(self):
-        a, b = self._lead(email_from='dashboard@example.test'), self._lead(email_from='dashboard@example.test')
+        a = self._lead(email_from='dashboard@example.test', phone='+1 650 253 0000')
+        b = self._lead(email_from='dashboard@example.test', phone='+1 650 253 0000')
         visible = self._candidate_case(a, b)
+        stale_a, stale_b = self._lead(email_from='stale-dashboard@example.test'), self._lead(email_from='stale-dashboard@example.test')
+        stale_case = self._candidate_case(stale_a, stale_b)
+        stale_case.sudo().write({'status': 'stale'})
         other_company = self.env['res.company'].create({'name': 'Dashboard hidden company'})
         other_leads = self.Lead.create([
             {'name': 'Hidden dashboard A', 'company_id': other_company.id, 'email_from': 'hidden@example.test'},
@@ -516,10 +520,14 @@ class TestDuplicateReview(TransactionCase):
         dashboard = dashboard_model.create({'pending_count': 999999, 'merged_count': 999999})
         self.assertEqual(dashboard.pending_count, 1)
         self.assertEqual(dashboard.merged_count, 0)
+        self.assertEqual(dashboard.strong_count, 1)
+        self.assertEqual(dashboard.stale_count, 1)
         action = dashboard.action_pending()
         visible_cases = self.Case.with_user(self.manager).with_company(self.company).search(action['domain'])
         self.assertEqual(visible_cases.ids, [visible.id])
         self.assertNotIn(hidden.id, visible_cases.ids)
+        strong_action = dashboard.action_strong()
+        self.assertNotIn(stale_case.id, self.Case.with_user(self.manager).search(strong_action['domain']).ids)
         with self.assertRaises(AccessError):
             dashboard.write({'pending_count': 0})
 

@@ -34,7 +34,7 @@ class DuplicateReviewDashboard(models.TransientModel):
             # crm.lead IDs for BOTH sources, so counts share queue authorization.
             return Case.search_count([('company_id', 'in', company_ids)] + domain)
 
-        active_review = [('status', 'in', ['pending', 'stale', 'merge_approved'])]
+        active_review = [('status', 'in', ['pending', 'merge_approved'])]
         Scan = self.env['gt.crm.duplicate.scan']
         latest_scan = Scan.search([('company_id', 'in', company_ids)], order='write_date desc, id desc', limit=1)
         return {
@@ -92,8 +92,8 @@ class DuplicateReviewDashboard(models.TransientModel):
             raise AccessError(_('You are not allowed to open Duplicate Review cases.'))
         domains = {
             'pending': [('status', '=', 'pending')],
-            'strong': [('confidence_band', '=', 'strong'), ('status', 'in', ['pending', 'stale', 'merge_approved'])],
-            'possible': [('confidence_band', '=', 'possible'), ('status', 'in', ['pending', 'stale', 'merge_approved'])],
+            'strong': [('confidence_band', '=', 'strong'), ('status', 'in', ['pending', 'merge_approved'])],
+            'possible': [('confidence_band', '=', 'possible'), ('status', 'in', ['pending', 'merge_approved'])],
             'approved': [('status', '=', 'merge_approved')],
             'merged': [('status', '=', 'merged')],
             'not_duplicate': [('status', '=', 'not_duplicate')],

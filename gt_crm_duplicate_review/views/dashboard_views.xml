@@ -39,7 +39,7 @@
     <record id="action_duplicate_review_dashboard_open" model="ir.actions.server">
         <field name="name">Open Secure Duplicate Review Dashboard</field>
         <field name="model_id" ref="model_gt_crm_duplicate_dashboard"/>
-        <field name="groups_id" eval="[(6, 0, [ref('group_duplicate_review_user')])]"/>
+        <field name="group_ids" eval="[(6, 0, [ref('group_duplicate_review_user')])]"/>
         <field name="state">code</field>
         <field name="code">action = env['gt.crm.duplicate.dashboard'].action_open_dashboard()</field>
     </record>
