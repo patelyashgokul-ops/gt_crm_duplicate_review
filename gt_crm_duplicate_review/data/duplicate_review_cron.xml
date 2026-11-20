@@ -1,0 +1,12 @@
+<odoo>
+    <record id="ir_cron_duplicate_review_company_scan" model="ir.cron">
+        <field name="name">CRM Duplicate Review: Enabled Companies</field>
+        <field name="model_id" ref="model_gt_crm_duplicate_case"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_scan_enabled_companies()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active">True</field>
+    </record>
+</odoo>

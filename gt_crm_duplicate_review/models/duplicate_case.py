@@ -1,6 +1,7 @@
 import hashlib
+import logging
 
-from odoo import api, fields, models
+from odoo import api, fields, models, _
 from odoo.exceptions import AccessError, ValidationError
 from odoo.fields import Domain
 from .matching import evaluate_pair
@@ -11,6 +12,7 @@ GROUP_LIMIT = 100
 DEFAULT_BATCH_SIZE = 50
 MAX_BATCH_SIZE = 200
 SCAN_LOCK_NAMESPACE = 67209120
+_logger = logging.getLogger(__name__)
 
 
 class DuplicateCase(models.Model):
@@ -36,7 +38,7 @@ class DuplicateCase(models.Model):
     matched_signals_summary = fields.Text(compute='_compute_evidence_summaries')
     conflict_indicators = fields.Json(default=lambda self: [])
     conflict_summary = fields.Text(compute='_compute_evidence_summaries')
-    conflict_count = fields.Integer(compute='_compute_conflict_count')
+    conflict_count = fields.Integer(compute='_compute_conflict_count', store=True, index=True)
     shared_contact = fields.Boolean()
     last_evaluated = fields.Datetime()
     match_explanation = fields.Char(required=True)
@@ -244,19 +246,34 @@ class DuplicateCase(models.Model):
         if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
             raise AccessError(self.env._('Only Duplicate Review Managers may scan.'))
         company = self.env.company
+        if company not in self.env.user.company_ids:
+            raise AccessError(self.env._('You are not authorized to scan this company.'))
+        return self._run_company_scan_batch(company)
+
+    @api.model
+    def _run_company_scan_batch(self, company):
+        """Run one bounded batch for an explicitly authorized company."""
         self.env.cr.execute(
             'SELECT pg_try_advisory_xact_lock(%s, %s)',
             (SCAN_LOCK_NAMESPACE, company.id),
         )
         if not self.env.cr.fetchone()[0]:
-            raise ValidationError(self.env._('A duplicate scan is already running for this company.'))
+            return self._scan_notice(self.env._('A duplicate scan is already running for this company.'), 'warning')
         cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', company.id)], limit=1)
         if not cursor:
             cursor = self.env['gt.crm.duplicate.scan'].sudo().create({'company_id': company.id})
         if cursor.state == 'blocked':
-            cursor.write({'state': 'running', 'blocked_lead_id': 0})
-        elif cursor.state == 'complete':
-            cursor.write({'state': 'running', 'fuzzy_truncated': False})
+            cursor.write({'state': 'running', 'blocked_lead_id': 0, 'started_at': cursor.started_at or fields.Datetime.now()})
+        elif cursor.state in ('complete', 'partial', 'failed'):
+            cursor.write({
+                'state': 'running', 'last_lead_id': 0, 'blocked_lead_id': 0,
+                'fuzzy_truncated': False, 'incomplete_groups': 0,
+                'records_evaluated': 0, 'candidate_pairs_evaluated': 0,
+                'cases_created': 0, 'cases_refreshed': 0, 'cases_skipped': 0,
+                'error_summary': False, 'started_at': fields.Datetime.now(), 'finished_at': False,
+            })
+        elif not cursor.started_at:
+            cursor.started_at = fields.Datetime.now()
         size = self.env['ir.config_parameter'].sudo().get_int('gt_crm_duplicate_review.batch_size', DEFAULT_BATCH_SIZE)
         size = max(1, min(size, MAX_BATCH_SIZE))
         leads = self.env['crm.lead'].sudo().search([
@@ -264,17 +281,31 @@ class DuplicateCase(models.Model):
             ('id', '>', cursor.last_lead_id),
         ], order='id', limit=size)
         if not leads:
-            cursor.write({'last_lead_id': 0, 'state': 'complete'})
-            message = (self.env._('Exact matching is complete. Near-email coverage was limited for broad domains.')
-                       if cursor.fuzzy_truncated else self.env._('The company scan is complete.'))
-            return self._scan_notice(message, 'warning' if cursor.fuzzy_truncated else 'info')
+            partial = bool(cursor.incomplete_groups or cursor.fuzzy_truncated)
+            cursor.write({
+                'last_lead_id': 0, 'state': 'partial' if partial else 'complete',
+                'finished_at': fields.Datetime.now(),
+            })
+            message = (self.env._('Scan is partial: %s oversized groups or fuzzy candidate sets were not fully evaluated.', cursor.incomplete_groups)
+                       if partial else self.env._('The company scan is complete.'))
+            return self._scan_notice(message, 'warning' if partial else 'info')
         for lead in leads:
-            if not self._scan_lead(lead, cursor):
+            try:
+                with self.env.cr.savepoint():
+                    completed = self._scan_lead(lead, cursor)
+            except Exception:
+                _logger.exception('Duplicate scan batch failed for company %s at checkpoint %s', company.id, cursor.last_lead_id)
+                cursor.write({
+                    'state': 'failed', 'finished_at': fields.Datetime.now(),
+                    'error_summary': self.env._('Batch failed; resume from the last committed CRM record.'),
+                })
+                return self._scan_notice(self.env._('Scan batch failed safely. The last checkpoint is retained; retry the scan to continue.'), 'danger')
+            if not completed:
                 return self._scan_notice(
-                    self.env._('Scan paused at CRM record %s because one exact-match group exceeds the safe limit.', lead.id),
+                    self.env._('Scan paused at CRM record %s because one exact-match group exceeds the safe limit. Review and explicitly skip this group to continue.', lead.id),
                     'warning',
                 )
-            cursor.last_lead_id = lead.id
+            cursor.write({'last_lead_id': lead.id, 'records_evaluated': cursor.records_evaluated + 1})
         cursor.state = 'running'
         message = self.env._('Processed %s CRM records. Run the scan again to continue.', len(leads))
         if cursor.fuzzy_truncated:
@@ -310,9 +341,11 @@ class DuplicateCase(models.Model):
                 ], order='id', limit=GROUP_LIMIT + 1)
                 if len(near) > GROUP_LIMIT:
                     cursor.fuzzy_truncated = True
+                cursor.incomplete_groups += 1
                 else:
                     candidates.update({record.id: record for record in near})
             for other in candidates.values():
+                cursor.candidate_pairs_evaluated += 1
                 evaluated = evaluate_pair(lead, other)
                 if not evaluated:
                     continue
@@ -340,11 +373,45 @@ class DuplicateCase(models.Model):
                             values['status'] = 'stale'
                             case._append_event('approval_invalidated', old_status, 'stale', self.env._('Source data changed after approval.'), digest, approval_digest)
                     elif old_status in ('merged', 'invalid'):
+                        cursor.cases_skipped += 1
                         continue
                     case.write(values)
+                    cursor.cases_refreshed += 1
                 else:
                     values.update({'company_id': lead.company_id.id, 'lead_a_id': a, 'lead_b_id': b})
                     self.sudo().create(values)
+                    cursor.cases_created += 1
+        return True
+
+    @api.model
+    def action_skip_blocked_group(self):
+        if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_manager'):
+            raise AccessError(self.env._('Only Duplicate Review Managers may resume a blocked scan.'))
+        company = self.env.company
+        self.env.cr.execute(
+            'SELECT pg_try_advisory_xact_lock(%s, %s)',
+            (SCAN_LOCK_NAMESPACE, company.id),
+        )
+        if not self.env.cr.fetchone()[0]:
+            raise ValidationError(self.env._('A duplicate scan is active for this company. Retry after it finishes.'))
+        cursor = self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', company.id)], limit=1)
+        if not cursor or cursor.state != 'blocked' or not cursor.blocked_lead_id:
+            raise ValidationError(self.env._('There is no blocked candidate group to skip.'))
+        cursor.write({
+            'last_lead_id': cursor.blocked_lead_id,
+            'blocked_lead_id': 0,
+            'incomplete_groups': cursor.incomplete_groups + 1,
+            'state': 'running',
+        })
+        return self._scan_notice(self.env._('Oversized group skipped. Run the scan again to continue; the final scan will be marked partial.'), 'warning')
+
+    @api.model
+    def _cron_scan_enabled_companies(self):
+        if not (self.env.su or self.env.user.has_group('base.group_system')):
+            raise AccessError(self.env._('Only a system administrator may run scheduled duplicate scans.'))
+        companies = self.env['res.company'].sudo().search([('duplicate_review_scan_enabled', '=', True)])
+        for company in companies:
+            self.with_context(allowed_company_ids=[company.id])._run_company_scan_batch(company)
         return True
 
 
@@ -356,6 +423,49 @@ class DuplicateScan(models.Model):
     last_lead_id = fields.Integer(default=0)
     blocked_lead_id = fields.Integer()
     fuzzy_truncated = fields.Boolean(default=False)
-    state = fields.Selection([('running', 'Running'), ('complete', 'Complete'), ('blocked', 'Blocked')], default='running', required=True)
+    started_at = fields.Datetime()
+    finished_at = fields.Datetime()
+    records_evaluated = fields.Integer(default=0)
+    candidate_pairs_evaluated = fields.Integer(default=0)
+    cases_created = fields.Integer(default=0)
+    cases_refreshed = fields.Integer(default=0)
+    cases_skipped = fields.Integer(default=0)
+    incomplete_groups = fields.Integer(default=0)
+    error_summary = fields.Char()
+    state = fields.Selection([
+        ('running', 'Running'), ('complete', 'Complete'), ('partial', 'Partial'),
+        ('blocked', 'Blocked'), ('failed', 'Failed'),
+    ], default='running', required=True, index=True)
 
     _unique_company = models.Constraint('unique(company_id)', 'Only one scan cursor may exist per company.')
+
+    @api.model
+    def _search(self, domain, offset=0, limit=None, order=None, *, active_test=True, bypass_access=False):
+        if not self.env.su:
+            if not self.env.user.has_group('gt_crm_duplicate_review.group_duplicate_review_user'):
+                raise AccessError(self.env._('You are not allowed to view scan progress.'))
+            domain = Domain(domain) & Domain('company_id', 'in', self.env.companies.ids)
+        return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.su:
+            raise AccessError(self.env._('Scan progress is created only by the scan service.'))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if not self.env.su:
+            raise AccessError(self.env._('Scan progress is read only.'))
+        return super().write(vals)
+
+    def unlink(self):
+        raise AccessError(self.env._('Scan progress cannot be deleted.'))
+
+
+class ResCompanyDuplicateReview(models.Model):
+    _inherit = 'res.company'
+
+    duplicate_review_scan_enabled = fields.Boolean(
+        string='Enable Scheduled Duplicate Review Scan', default=False,
+        groups='base.group_system',
+    )

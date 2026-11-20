@@ -7,6 +7,7 @@ import uuid
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
+from odoo.fields import Domain
 
 _logger = logging.getLogger(__name__)
 MANAGER_GROUP = 'gt_crm_duplicate_review.group_duplicate_review_manager'
@@ -71,8 +72,8 @@ class DuplicateEvent(models.Model):
     @api.model
     def _search(self, domain, offset=0, limit=None, order=None, *, active_test=True, bypass_access=False):
         if not self.env.su and not bypass_access:
-            visible_cases = self.env['gt.crm.duplicate.case'].search([])
-            domain = [('case_id', 'in', visible_cases.ids)] + list(domain)
+            visible_cases = self.env['gt.crm.duplicate.case']
+            domain = Domain('case_id', 'in', visible_cases._search([])) & Domain(domain)
         return super()._search(domain, offset, limit, order, active_test=active_test, bypass_access=bypass_access)
 
 
