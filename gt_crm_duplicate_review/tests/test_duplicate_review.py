@@ -93,6 +93,15 @@ class TestDuplicateReview(TransactionCase):
                             'Native merge must not sum expected revenue')
         self.assertEqual(len(self.Lead.sudo().browse([a.id, b.id]).exists()), 1)
 
+    def test_p3_native_merge_lead_and_opportunity_results_in_opportunity(self):
+        lead = self._lead(name='Lead source', type='lead', email_from='mixed@example.test', phone='+1 650-253-0000')
+        opportunity = self._lead(name='Opportunity source', type='opportunity', email_from='mixed@example.test', mobile='+1 650-253-0000')
+        case = self._candidate_case(lead, opportunity).with_user(self.manager)
+        case._approve_merge('Reviewed lead conversion and opportunity context.')
+        case._execute_approved_merge(True)
+        self.assertEqual(case.status, 'merged')
+        self.assertEqual(case.merge_survivor_id.type, 'opportunity')
+
     def test_p3_unapproved_merge_is_rejected(self):
         a = self._lead(email_from='unapproved@example.test')
         b = self._lead(email_from='unapproved@example.test')

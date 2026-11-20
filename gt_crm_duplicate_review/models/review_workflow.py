@@ -107,6 +107,12 @@ class DuplicateCaseWorkflow(models.Model):
             raise UserError(_('Both CRM records must still exist. Recheck this case.'))
         if not self.company_id or a.company_id != self.company_id or b.company_id != self.company_id:
             raise UserError(_('These CRM records belong to different companies and cannot be merged.'))
+        if a.id >= b.id:
+            raise ValidationError(_('The CRM source pair is not in canonical order.'))
+        if not a.active or not b.active or a.lost_reason_id or b.lost_reason_id:
+            raise UserError(_('Archived or lost CRM records are not eligible for a duplicate-review merge.'))
+        if a.won_status == 'won' or b.won_status == 'won':
+            raise UserError(_('Won CRM records cannot be merged through this workflow.'))
         if not self.env.user.has_group(MANAGER_GROUP) or self.company_id not in self.env.user.company_ids:
             raise AccessError(_('You are not authorized for this company.'))
         for lead in (a, b):
@@ -138,6 +144,10 @@ class DuplicateCaseWorkflow(models.Model):
                 'user': lead.user_id.id, 'team': lead.team_id.id, 'stage': lead.stage_id.id,
                 'revenue': lead.expected_revenue, 'probability': lead.probability,
                 'priority': lead.priority, 'lost_reason': lead.lost_reason_id.id,
+                'won_status': lead.won_status, 'description': lead.description or '',
+                'tags': sorted(lead.tag_ids.ids), 'campaign': lead.campaign_id.id,
+                'source': lead.source_id.id, 'medium': lead.medium_id.id,
+                'deadline': fields.Date.to_string(lead.date_deadline) if lead.date_deadline else False,
             })
         payload = json.dumps(snapshot, sort_keys=True, separators=(',', ':'), default=str)
         return hashlib.sha256(payload.encode()).hexdigest()
@@ -173,7 +183,12 @@ class DuplicateCaseWorkflow(models.Model):
         old_status = self.status
         if old_status == 'merged' or old_status == 'invalid':
             raise UserError(_('This case is terminal and cannot be rechecked.'))
-        a, b = self._validate_pair()
+        try:
+            a, b = self._validate_pair()
+        except UserError:
+            self.sudo().write({'status': 'invalid', 'last_evaluated': fields.Datetime.now()})
+            self._append_event('invalidated', old_status, 'invalid', _('Sources are unavailable or no longer eligible for review.'))
+            return True
         from .matching import evaluate_pair
         result = evaluate_pair(a, b)
         if not result:
@@ -212,8 +227,8 @@ class DuplicateCaseWorkflow(models.Model):
         self._lock_case_and_sources()
         if reason_code not in {'different_requirements', 'different_contacts', 'shared_phone', 'generic_email', 'separate_opportunities', 'false_positive', 'other'}:
             raise ValidationError(_('Choose a supported Not Duplicate reason.'))
-        if not (reason or '').strip() or (reason_code == 'other' and len(reason.strip()) < 8):
-            raise ValidationError(_('A meaningful review reason is required.'))
+        if len((reason or '').strip()) < 8:
+            raise ValidationError(_('A meaningful review reason is required (at least 8 characters).'))
         if self.status not in ('pending', 'stale'):
             raise UserError(_('Only a pending or stale case can be marked Not Duplicate.'))
         a, b, result, fingerprint = self._fresh_evaluation()
@@ -293,7 +308,12 @@ class DuplicateCaseWorkflow(models.Model):
             old = self.status
             self.sudo().write({'status': 'stale'})
             self._append_event('approval_invalidated', old, 'stale', _('Source data changed after approval.'), approval_fingerprint=self.approval_fingerprint)
-            raise UserError(_('These CRM records have changed since the merge was approved. Review and approve them again.'))
+            return {
+                'type': 'ir.actions.client', 'tag': 'display_notification',
+                'params': {'title': _('Approval is stale'),
+                           'message': _('These CRM records have changed since the merge was approved. Review and approve them again.'),
+                           'type': 'warning', 'sticky': True},
+            }
         _source_a, _source_b, result, fingerprint = self._fresh_evaluation()
         if fingerprint != self.source_fingerprint:
             raise UserError(_('Matching evidence is stale. Recheck and approve this case again.'))
@@ -350,7 +370,7 @@ class CrmLeadReviewHooks(models.Model):
         'company_id', 'active', 'type', 'email_from', 'phone', 'mobile',
         'gt_review_email_key', 'gt_review_phone_key', 'gt_review_mobile_key',
         'partner_id', 'name', 'user_id', 'team_id', 'stage_id',
-        'expected_revenue', 'probability', 'priority', 'lost_reason_id',
+        'expected_revenue', 'probability', 'priority', 'lost_reason_id', 'won_status',
     })
 
     def _review_cases(self):
@@ -400,8 +420,8 @@ class DuplicateReviewWizard(models.TransientModel):
         ('shared_phone', 'Shared office phone number'), ('generic_email', 'Shared generic email'),
         ('separate_opportunities', 'Separate sales opportunities'),
         ('false_positive', 'False-positive similarity'), ('other', 'Other'),
-    ], required=True)
-    reason = fields.Text(required=True)
+    ])
+    reason = fields.Text()
 
     def action_not_duplicate(self):
         self.ensure_one()
