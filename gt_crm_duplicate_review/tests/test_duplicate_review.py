@@ -217,6 +217,8 @@ class TestDuplicateReview(TransactionCase):
 
     def test_concurrent_scan_lock(self):
         self._lead(email_from='lock@example.com')
+        cursor_model = self.env['gt.crm.duplicate.scan'].sudo()
+        existing_cursor_ids = cursor_model.search([('company_id', '=', self.company.id)]).ids
         with self.env.registry.cursor() as other_cursor:
             other_cursor.execute(
                 'SELECT pg_try_advisory_xact_lock(%s, %s)',
@@ -225,7 +227,7 @@ class TestDuplicateReview(TransactionCase):
             self.assertTrue(other_cursor.fetchone()[0])
             with self.assertRaisesRegex(Exception, 'already running'):
                 self.Case.with_user(self.manager).action_scan()
-        self.assertFalse(self.env['gt.crm.duplicate.scan'].sudo().search([('company_id', '=', self.company.id)]))
+        self.assertEqual(cursor_model.search([('company_id', '=', self.company.id)]).ids, existing_cursor_ids)
 
     def test_database_pair_constraints(self):
         self.env.cr.execute("""
