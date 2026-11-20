@@ -152,6 +152,13 @@ class TestDuplicateReview(TransactionCase):
         self.assertEqual(cursor.blocked_lead_id, leads[-1].id)
         self.assertEqual(cursor.last_lead_id, leads[-2].id)
         self.assertEqual(self.Case.search_count([]), 3)
+        leads[-1].email_from = 'corrected@example.com'
+        with patch.object(duplicate_case, 'GROUP_LIMIT', 2):
+            result = self.Case.with_user(self.manager).action_scan()
+        self.assertEqual(result['params']['type'], 'info')
+        self.assertEqual(cursor.state, 'running')
+        self.assertEqual(cursor.blocked_lead_id, 0)
+        self.assertEqual(cursor.last_lead_id, leads[-1].id)
 
     def test_configured_batch_size_and_completion(self):
         leads = [self._lead(name=f'Unique {i}', email_from=f'unique{i}@example.com') for i in range(5)]

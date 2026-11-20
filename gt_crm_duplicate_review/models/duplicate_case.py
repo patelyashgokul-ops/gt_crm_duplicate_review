@@ -145,7 +145,7 @@ class DuplicateCase(models.Model):
         if not cursor:
             cursor = self.env['gt.crm.duplicate.scan'].sudo().create({'company_id': company.id})
         if cursor.state == 'blocked':
-            raise ValidationError(self.env._('Scan is paused: a matching group exceeded the safe group limit.'))
+            cursor.write({'state': 'running', 'blocked_lead_id': 0})
         size = self.env['ir.config_parameter'].sudo().get_int('gt_crm_duplicate_review.batch_size', DEFAULT_BATCH_SIZE)
         size = max(1, min(size, MAX_BATCH_SIZE))
         leads = self.env['crm.lead'].sudo().search([
