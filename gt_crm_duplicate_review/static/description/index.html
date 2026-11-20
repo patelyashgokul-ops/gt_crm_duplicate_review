@@ -1,110 +1,317 @@
-<div id="gtdr-listing" style="max-width:1170px;margin:0 auto;background:#F7F5F0;color:#596477;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;">
-  <style>
-    #gtdr-listing *{box-sizing:border-box}#gtdr-listing .gtdr-pad{padding:clamp(38px,6vw,82px) clamp(16px,5vw,58px)}
-    #gtdr-listing .gtdr-kicker{margin:0 0 13px;color:#805C27;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-    #gtdr-listing h1,#gtdr-listing h2{font-family:Georgia,'Times New Roman',serif;font-weight:400;line-height:1.08}
-    #gtdr-listing h1{margin:0 0 19px;color:#fff;font-size:clamp(38px,5.2vw,62px)}#gtdr-listing h2{margin:0 0 16px;color:#172940;font-size:clamp(30px,4vw,46px)}
-    #gtdr-listing h3{margin:0 0 9px;color:#172940;font-size:19px;line-height:1.25}#gtdr-listing p{margin:0 0 14px}
-    #gtdr-listing .gtdr-card{height:100%;padding:22px;background:#fff;border:1px solid #DED8CD;border-radius:12px;box-shadow:0 5px 18px rgba(23,41,64,.05)}
-    #gtdr-listing .gtdr-num{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;margin-bottom:14px;border-radius:9px;background:#F3EBDD;color:#805C27;font-weight:700}
-    #gtdr-listing .gtdr-shot{margin:0;padding:14px;background:#fff;border:1px solid #DED8CD;border-radius:12px}
-    #gtdr-listing .gtdr-shot img{display:block;width:100%;height:auto;border-radius:6px}
-    #gtdr-listing .gtdr-shot figcaption{padding:12px 4px 2px;color:#667184;font-size:14px}
-    #gtdr-listing .gtdr-cta{display:inline-block;margin:7px 9px 0 0;padding:12px 19px;border:1px solid #D5AD69;border-radius:6px;background:#D5AD69;color:#172940!important;font-size:14px;font-weight:700;text-decoration:none}
-    #gtdr-listing .gtdr-cta.secondary{background:transparent;color:#F3D9A9!important;border-color:#8C7958}
-    #gtdr-listing .gtdr-callout{padding:20px 22px;border-left:4px solid #B78A43;border-radius:7px;background:#EFE9DE;color:#3B4657}
-    #gtdr-listing .gtdr-step{height:100%;padding:20px 14px;border:1px solid #DDD4C6;border-radius:10px;background:#fff;text-align:center;color:#172940;font-weight:700}
-    #gtdr-listing .gtdr-step b{display:block;margin-bottom:7px;color:#946D31;font-size:12px;letter-spacing:1.5px}
-    #gtdr-listing .gtdr-faq{padding:17px 0;border-top:1px solid #D9D2C8}#gtdr-listing .gtdr-faq p{margin:0;color:#626D7D}
-    @media(max-width:767px){#gtdr-listing .gtdr-hero{padding-top:42px!important;padding-bottom:42px!important}#gtdr-listing .gtdr-step{text-align:left}#gtdr-listing .gtdr-pad{padding:36px 20px}}
-  </style>
-
-  <section class="gtdr-hero" aria-label="Product overview" style="padding:68px clamp(18px,5vw,58px);background:#14243A;color:#D9DFE6;border-bottom:5px solid #B78A43;">
-    <div class="row align-items-center" style="max-width:1054px;margin:0 auto;">
-      <div class="col-12 col-lg-5" style="padding:0 16px 24px 0;">
-        <p style="margin:0 0 27px;color:#fff;font-size:13px;font-weight:700;letter-spacing:2px;"><span style="padding-bottom:8px;border-bottom:2px solid #D5AD69;">GOLOK TECHNOLOGY</span></p>
-        <p style="margin:0 0 13px;color:#E2C58F;font-size:12px;font-weight:700;letter-spacing:2px;">CRM OPERATIONS</p>
-        <h1>Find Similar Leads. Review Conflicts. Merge With Confidence.</h1>
-        <p style="max-width:470px;color:#fff;font-size:19px;line-height:1.45;"><strong>Explainable duplicate suggestions with a controlled human review workflow.</strong></p>
-        <p style="max-width:470px;color:#D9DFE6;">Find matching CRM leads and opportunities, compare the business context, and let an authorized manager decide what happens next. Similarity never triggers an automatic merge.</p>
-        <p style="margin:22px 0 12px;"><a class="gtdr-cta" href="mailto:patelyash.gokul@gmail.com?subject=CRM%20Duplicate%20Review%20-%20Demo%20Request">Request a Demo</a><a class="gtdr-cta secondary" href="mailto:patelyash.gokul@gmail.com?subject=CRM%20Duplicate%20Review%20-%20Support">Contact Support</a></p>
-        <p style="margin:16px 0 0;color:#E2C58F;font-size:12px;font-weight:700;letter-spacing:.8px;">EXACT MATCHING &nbsp; · &nbsp; BUSINESS CONFLICTS &nbsp; · &nbsp; HUMAN APPROVAL</p>
+<!-- Odoo Apps description fragment. The marketplace supplies the Bootstrap grid and page chrome. -->
+<div id="gt-crm-duplicate-review" style="color:#596477;background-color:#FFFFFF;font-family:Arial, Helvetica, sans-serif;font-size:16px;line-height:1.6;">
+  <section aria-label="Product overview" style="background-color:#0C192A;color:#D2DBE5;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <div class="row align-items-center" style="margin:0;">
+        <div class="col-12 col-lg-5" style="padding:0 12px 24px;">
+          <p style="margin:0 0 28px;color:#FFFFFF;font-size:13px;font-weight:700;letter-spacing:2px;"><span style="padding-bottom:8px;border-bottom:2px solid #D5A85F;">GOLOK TECHNOLOGY</span></p>
+          <p style="margin:0 0 12px;color:#E4B875;font-size:12px;font-weight:700;letter-spacing:2px;">CRM DUPLICATE REVIEW</p>
+          <h1 style="margin:0 0 16px;color:#FFFFFF;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(38px,4.6vw,60px);font-weight:400;line-height:1.03;">CRM Duplicate Review</h1>
+          <p style="margin:0 0 14px;color:#FFFFFF;font-size:19px;line-height:1.4;"><strong>Find similar records. Review conflicts. Merge only after approval.</strong></p>
+          <p style="margin:0 0 14px;max-width:430px;">Find potentially duplicate CRM leads and opportunities with explainable matching evidence, business-context warnings, and a manager-controlled native merge workflow.</p>
+          <p style="margin:20px 0 0;">
+            <a class="d-inline-block" href="mailto:patelyash.gokul@gmail.com?subject=CRM%20Duplicate%20Review%20-%20Demo%20Request" style="padding:10px 16px;color:#E4B875;background-color:#10263E;border:1px solid #D5A85F;border-radius:6px;font-size:14px;font-weight:700;text-decoration:underline;">Request a Demo</a>
+          </p>
+          <p style="margin:20px 0 0;font-size:11px;font-weight:700;letter-spacing:1px;color:#E4B875;"><span class="d-inline-block mr-2 mb-2" style="padding:5px 8px;border:1px solid #4A5360;border-radius:4px;">EXPLAINABLE MATCHING</span> <span class="d-inline-block mb-2" style="padding:5px 8px;border:1px solid #4A5360;border-radius:4px;">CONTROLLED MERGE</span></p>
+        </div><div class="col-12 col-lg-7" style="padding:0 10px 20px;">
+          <figure style="margin:0;padding:clamp(10px,2vw,22px);background-color:#10263E;border:1px solid #3B4B60;border-radius:14px;">
+            <p style="margin:0 0 12px;color:#E4B875;font-size:12px;font-weight:700;letter-spacing:2px;">CRM REVIEW / ODOO CRM</p>
+            <a class="d-block" href="case_comparison.png" aria-label="Open full-size Odoo capture: CRM duplicate case with source comparison, match evidence and business conflicts"><img class="img-fluid w-100 d-block" style="width:100%;max-width:100%;height:auto;border-radius:6px;" src="case_comparison.png" alt="CRM duplicate case comparison with matching evidence and contextual conflicts"></a>
+            <figcaption style="margin-top:14px;padding-top:12px;border-top:1px solid #3B4B60;font-size:14px;color:#D2DBE5;"><strong style="color:#FFFFFF;">Review required</strong> &middot; Matching contact signals are suggestions, not proof that two opportunities represent the same deal.</figcaption>
+          </figure>
+        </div>
       </div>
-      <div class="col-12 col-lg-7" style="padding:0 0 14px 12px;">
-        <figure class="gtdr-shot" style="padding:13px;background:#1C3049;border-color:#536174;">
-          <p style="margin:0 0 12px;color:#E2C58F;font-size:12px;font-weight:700;letter-spacing:1.8px;">CRM DUPLICATE REVIEW / DASHBOARD</p>
-          <a href="dashboard.png" aria-label="Open full-size CRM Duplicate Review dashboard"><img src="dashboard.png" alt="Genuine Odoo CRM Duplicate Review dashboard with review metrics"></a>
-          <figcaption style="color:#D9DFE6;border-top:1px solid #536174;">A company-scoped view of cases that the current user is permitted to review.</figcaption>
-        </figure>
+      <div style="margin:22px 10px 0;border-top:1px solid #455263;">
+        <div class="row" style="margin:0;">
+          <div class="col-4" style="padding:15px 2px 0;color:#FFFFFF;font-size:12px;font-weight:700;letter-spacing:0.6px;"><span style="color:#E4B875;">01</span> DETECT</div>
+          <div class="col-4" style="padding:15px 2px 0;color:#FFFFFF;font-size:12px;font-weight:700;letter-spacing:0.6px;"><span style="color:#E4B875;">02</span> REVIEW</div>
+          <div class="col-4" style="padding:15px 2px 0;color:#FFFFFF;font-size:12px;font-weight:700;letter-spacing:0.6px;"><span style="color:#E4B875;">03</span> DECIDE</div>
+        </div>
       </div>
     </div>
-    <div style="max-width:1054px;margin:20px auto 0;padding-top:15px;border-top:1px solid #586372;">
-      <div class="row" style="margin:0;"><div class="col-4" style="padding:5px;color:#fff;font-size:12px;font-weight:700;"><span style="color:#D5AD69;">01</span> &nbsp; DETECT</div><div class="col-4" style="padding:5px;color:#fff;font-size:12px;font-weight:700;"><span style="color:#D5AD69;">02</span> &nbsp; REVIEW</div><div class="col-4" style="padding:5px;color:#fff;font-size:12px;font-weight:700;"><span style="color:#D5AD69;">03</span> &nbsp; DECIDE</div></div>
-    </div>
   </section>
-
-  <section class="gtdr-pad" aria-label="Customer challenge" style="background:#fff;">
-    <div style="max-width:1054px;margin:auto;">
-      <p class="gtdr-kicker">THE CRM CHALLENGE</p><h2>Reduce duplicate noise without hiding real sales work.</h2>
-      <p style="max-width:830px;color:#657082;font-size:17px;">Repeated records can cause duplicate outreach, unclear ownership and confusing pipeline reports. Yet two opportunities may share a customer and contact details while representing different projects. Give reviewers the evidence and context to distinguish them.</p>
-      <div class="row" style="margin:24px -9px 0;"><div class="col-12 col-md-4" style="padding:9px;"><article class="gtdr-card"><span class="gtdr-num">01</span><h3>Repeated CRM records</h3><p>Spot exact contact matches and carefully limited near-email suggestions.</p></article></div><div class="col-12 col-md-4" style="padding:9px;"><article class="gtdr-card"><span class="gtdr-num">02</span><h3>Conflicting deal context</h3><p>Review differences in names, ownership, stages, customers and expected revenue.</p></article></div><div class="col-12 col-md-4" style="padding:9px;"><article class="gtdr-card"><span class="gtdr-num">03</span><h3>Risky manual cleanup</h3><p>Keep decisions deliberate, permission-checked and recorded in review history.</p></article></div></div>
-    </div>
-  </section>
-
-  <section class="gtdr-pad" aria-label="Matching intelligence" style="background:#F3F0E9;">
-    <div class="row align-items-center" style="max-width:1054px;margin:0 auto;"><div class="col-12 col-lg-6" style="padding:0 18px 18px 0;">
-      <p class="gtdr-kicker">MATCHING INTELLIGENCE</p><h2>Clear signals, explainable scores.</h2><p>Matching uses normalized CRM data and deterministic heuristic scores. Scores rank evidence; they are not probabilities or proof that two opportunities are the same business deal.</p>
-      <ul style="padding-left:21px;color:#536174;"><li>Exact normalized email and valid phone/mobile matches.</li><li>Phone-to-mobile comparisons when the normalized numbers are equivalent.</li><li>Conservative near-email matching; near-phone matching is disabled where safe equivalence cannot be established.</li><li>Generic mailboxes and shared contact details are cautions, not an unsafe universal blacklist.</li><li>Invalid and blank identifiers do not create matches.</li></ul>
-    </div><div class="col-12 col-lg-6" style="padding:0 0 18px 12px;">
-      <div style="padding:24px;background:#fff;border:1px solid #DDD4C6;border-radius:12px;">
-        <h3>Match score guide</h3><div class="row" style="margin:0;border-top:1px solid #E7E1D7;padding-top:10px;"><div class="col-8" style="padding:7px 3px;">Exact email + exact phone</div><div class="col-4 text-right" style="padding:7px 3px;color:#805C27;font-weight:700;">95 / 100</div><div class="col-8" style="padding:7px 3px;">Exact email</div><div class="col-4 text-right" style="padding:7px 3px;color:#805C27;font-weight:700;">85 / 100</div><div class="col-8" style="padding:7px 3px;">Exact phone/mobile</div><div class="col-4 text-right" style="padding:7px 3px;color:#805C27;font-weight:700;">80 / 100</div><div class="col-8" style="padding:7px 3px;">Conservative near-email</div><div class="col-4 text-right" style="padding:7px 3px;color:#805C27;font-weight:700;">65 / 100</div></div>
-        <p style="margin:15px 0 0;padding-top:13px;border-top:1px solid #E7E1D7;color:#596477;font-size:14px;">No score independently authorizes a decision or merge.</p>
+  
+  <section aria-label="The challenge" style="background-color:#FFFFFF;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">THE CRM CHALLENGE</p>
+      <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">Duplicate Noise. Conflicting Sales Context.</h2>
+      <p style="margin:0 0 14px;max-width:650px;font-size:18px;margin-bottom:27px;">Repeated CRM records can cause extra outreach and confusing ownership. But shared contact details can also belong to separate legitimate opportunities.</p>
+      <div class="row " style="margin:0;">
+        <div class="col-12 col-md-6" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FBF0ED;border:1px solid #E7C9C4;border-radius:12px;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Without Review</h3>
+            <ul style="margin:0;padding-left:21px;">
+              <li style="margin-bottom:7px;">Salespeople may contact the same prospect twice.</li>
+              <li style="margin-bottom:7px;">Pipeline ownership and status become unclear.</li>
+              <li style="margin-bottom:7px;">Shared contacts can be mistaken for duplicate deals.</li>
+              <li style="margin-bottom:7px;">Unreviewed merging can remove useful CRM history.</li>
+            </ul>
+          </div>
+        </div><div class="col-12 col-md-6" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#EAF4EE;border:1px solid #C5DECF;border-radius:12px;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">With Duplicate Review</h3>
+            <ul style="margin:0;padding-left:21px;">
+              <li style="margin-bottom:7px;">Compare normalized email, phone and mobile signals.</li>
+              <li style="margin-bottom:7px;">See deterministic scores and their matching evidence.</li>
+              <li style="margin-bottom:7px;">Inspect ownership, stage, customer and opportunity conflicts.</li>
+              <li style="margin-bottom:7px;">Approve and confirm a native merge only when appropriate.</li>
+            </ul>
+          </div>
+        </div>
       </div>
-    </div></div>
-  </section>
-
-  <section class="gtdr-pad" aria-label="Review workspace" style="background:#fff;">
-    <div style="max-width:1054px;margin:auto;"><p class="gtdr-kicker">THE REVIEW WORKSPACE</p><h2>One queue for the evidence that matters.</h2><p style="max-width:840px;color:#657082;">Filter and group cases by classification, status, company, reviewer or sales context. Dashboard counts and case visibility follow the current user’s access to both source CRM records.</p>
-      <figure class="gtdr-shot"><a href="review_queue.png" aria-label="Open full-size CRM duplicate review queue"><img src="review_queue.png" alt="Genuine Odoo duplicate review queue with case classification and status"></a><figcaption>Review Queue: inspect candidate classification, score, status and context.</figcaption></figure>
     </div>
   </section>
-
-  <section class="gtdr-pad" aria-label="Side by side comparison" style="background:#F3F0E9;">
-    <div style="max-width:1054px;margin:auto;"><p class="gtdr-kicker">SIDE-BY-SIDE COMPARISON</p><h2>Compare CRM records before deciding.</h2><p style="max-width:840px;color:#657082;">Review lead type, contact, customer, email, phone, mobile, salesperson, sales team, stage, expected revenue, probability, priority and record status. Conflict indicators are informational and never reconcile CRM fields automatically.</p>
-      <figure class="gtdr-shot"><a href="case_comparison.png" aria-label="Open full-size duplicate case comparison"><img src="case_comparison.png" alt="Genuine Odoo duplicate case showing source comparison, matching evidence and conflict warnings"></a><figcaption>Source data is read from CRM records and remains subject to the user’s normal CRM permissions.</figcaption></figure>
-      <div class="gtdr-callout" style="margin-top:20px;"><strong>Illustrative example:</strong> Two opportunities share a valid email and phone, producing a 95/100 heuristic score. Their names and pipeline stages differ, and the review shows those conflicts. If they represent separate product projects, the manager can record “Separate sales opportunities”; neither source record is changed by that decision.</div>
+  
+  <section aria-label="Features" style="background-color:#F3F0E9;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">BUILT FOR CONFIDENT CRM DECISIONS</p>
+      <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">Explainable Matching. Controlled Decisions.</h2>
+      <div class="row " style="margin:0;">
+        <div class="col-12 col-md-6 col-lg-4" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+            <p style="margin:0 0 15px;color:#79531E;font-size:13px;font-weight:700;"><span aria-hidden="true" style="margin-right:10px;color:#9A6928;font-size:24px;vertical-align:middle;">&#9671;</span> 01</p>
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Exact Email and Phone Matching</h3>
+            <p style="margin:0;">Find exact normalized email, phone and mobile matches; phone-to-mobile comparisons are supported when numbers safely normalize to the same value.</p>
+          </div>
+        </div><div class="col-12 col-md-6 col-lg-4" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+            <p style="margin:0 0 15px;color:#79531E;font-size:13px;font-weight:700;"><span aria-hidden="true" style="margin-right:10px;color:#9A6928;font-size:24px;vertical-align:middle;">&#9719;</span> 02</p>
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Conservative Near-Email Suggestions</h3>
+            <p style="margin:0;">Conservative near-email checks can surface likely typing differences; generic mailbox patterns receive cautionary treatment.</p>
+          </div>
+        </div><div class="col-12 col-md-6 col-lg-4" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+            <p style="margin:0 0 15px;color:#79531E;font-size:13px;font-weight:700;"><span aria-hidden="true" style="margin-right:10px;color:#9A6928;font-size:24px;vertical-align:middle;">&#8599;</span> 03</p>
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Deterministic Match Scores</h3>
+            <p style="margin:0;">Scores rank evidence from 0?100. They are heuristics, not probabilities or merge instructions.</p>
+          </div>
+        </div><div class="col-12 col-md-6 col-lg-4" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+            <p style="margin:0 0 15px;color:#79531E;font-size:13px;font-weight:700;"><span aria-hidden="true" style="margin-right:10px;color:#9A6928;font-size:24px;vertical-align:middle;">&#8856;</span> 04</p>
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Business Conflict Indicators</h3>
+            <p style="margin:0;">Review differences in opportunity name, owner, team, stage, customer association, expected revenue and priority.</p>
+          </div>
+        </div><div class="col-12 col-md-6 col-lg-4" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+            <p style="margin:0 0 15px;color:#79531E;font-size:13px;font-weight:700;"><span aria-hidden="true" style="margin-right:10px;color:#9A6928;font-size:24px;vertical-align:middle;">&#9672;</span> 05</p>
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Company-Scoped Candidate Pairs</h3>
+            <p style="margin:0;">Candidate pairs must belong to the same eligible company. Company-less leads are excluded from automatic matching.</p>
+          </div>
+        </div><div class="col-12 col-md-6 col-lg-4" style="padding:0 10px 20px;">
+          <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+            <p style="margin:0 0 15px;color:#79531E;font-size:13px;font-weight:700;"><span aria-hidden="true" style="margin-right:10px;color:#9A6928;font-size:24px;vertical-align:middle;">&#8635;</span> 06</p>
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Approval Before Native Merge</h3>
+            <p style="margin:0;">A manager reviews and approves; a separate explicit confirmation invokes Odoo?s native CRM merge after source revalidation.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
-
-  <section class="gtdr-pad" aria-label="Controlled merge workflow" style="background:#fff;">
-    <div style="max-width:1054px;margin:auto;"><p class="gtdr-kicker">CONTROLLED WORKFLOW</p><h2>Review → Approve → Confirm → Native CRM Merge.</h2><p style="color:#657082;">The manager reviews the pair, approves it with a reason, then separately acknowledges the irreversible native CRM merge. The server revalidates access, company, source freshness and approval before it runs the native behavior.</p>
-      <div class="row" style="margin:18px -7px 28px;"><div class="col-12 col-md" style="padding:7px;"><div class="gtdr-step"><b>STEP 01</b>Detect</div></div><div class="col-12 col-md" style="padding:7px;"><div class="gtdr-step"><b>STEP 02</b>Review</div></div><div class="col-12 col-md" style="padding:7px;"><div class="gtdr-step"><b>STEP 03</b>Approve</div></div><div class="col-12 col-md" style="padding:7px;"><div class="gtdr-step"><b>STEP 04</b>Confirm</div></div><div class="col-12 col-md" style="padding:7px;"><div class="gtdr-step"><b>STEP 05</b>Verify result</div></div></div>
-      <div class="row" style="margin:0 -9px;"><div class="col-12 col-md-6" style="padding:9px;"><figure class="gtdr-shot"><a href="merge_confirmation.png" aria-label="Open full-size final merge confirmation"><img src="merge_confirmation.png" alt="Genuine Odoo merge confirmation with explicit irreversible action acknowledgment"></a><figcaption>Separate confirmation before invoking Odoo’s native CRM merge.</figcaption></figure></div><div class="col-12 col-md-6" style="padding:9px;"><figure class="gtdr-shot"><a href="native_merge_result.png" aria-label="Open full-size verified native merge result"><img src="native_merge_result.png" alt="Genuine Odoo native CRM merge result and resulting survivor"></a><figcaption>The case is recorded as merged only after the resulting CRM record is verified.</figcaption></figure></div></div>
-      <div class="gtdr-callout" style="margin-top:15px;"><strong>Important:</strong> Native CRM merging can remove or consolidate a source record. Odoo determines survivor and field precedence. This addon does not sum expected revenue or provide custom field reconciliation.</div>
+  
+  <section aria-label="Product experience" style="background-color:#0C192A;color:#D2DBE5;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <p style="margin:0 0 12px;color:#E4B875;font-size:12px;font-weight:700;letter-spacing:2px;">THE PRODUCT EXPERIENCE</p>
+      <h2 style="margin:0 0 22px;color:#FFFFFF;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">A Clear Review Queue. A Deliberate Decision.</h2>
+      <p style="margin:0 0 14px;margin-bottom:24px;">Explore the actual Odoo CRM screens. Screenshots use genuine application captures with synthetic records.</p>
+      <figure style="margin:0;padding:14px;background-color:#10263E;border:1px solid #334861;border-radius:12px;">
+        <a class="d-block" href="dashboard.png" aria-label="Open full-size Odoo capture: CRM Duplicate Review dashboard with secure review metrics"><img class="img-fluid w-100 d-block" style="width:100%;max-width:100%;height:auto;border-radius:6px;" src="dashboard.png" alt="CRM Duplicate Review dashboard with secure review metrics"></a>
+        <figcaption style="padding:15px 6px 1px;">
+          <h3 style="margin:0 0 8px;color:#FFFFFF;font-size:21px;line-height:1.25;">See review work at a glance</h3>
+          <p style="margin:0;">Open authorized pending, strong-match, possible-match, stale and conflict cases from the dashboard.</p>
+        </figcaption>
+      </figure>
+      <div style="margin-top:20px;">
+        <div class="row " style="margin:0;">
+          <div class="col-12 col-lg-6" style="padding:0 10px 20px;">
+            <figure style="margin:0;padding:14px;background-color:#10263E;border:1px solid #334861;border-radius:12px;">
+              <a class="d-block" href="review_queue.png" aria-label="Open full-size Odoo capture: CRM Duplicate Review queue showing candidate status and match classification"><img class="img-fluid w-100 d-block" style="width:100%;max-width:100%;height:auto;border-radius:6px;" src="review_queue.png" alt="CRM Duplicate Review queue showing candidate status and match classification"></a>
+              <figcaption style="padding:15px 6px 1px;">
+                <h3 style="margin:0 0 8px;color:#FFFFFF;font-size:21px;line-height:1.25;">Work through the review queue</h3>
+                <p style="margin:0;">Filter and group candidates while case visibility remains tied to access to both source CRM records.</p>
+              </figcaption>
+            </figure>
+          </div><div class="col-12 col-lg-6" style="padding:0 10px 20px;">
+            <figure style="margin:0;padding:14px;background-color:#10263E;border:1px solid #334861;border-radius:12px;">
+              <a class="d-block" href="native_merge_result.png" aria-label="Open full-size Odoo capture: verified native CRM merge result with the surviving opportunity"><img class="img-fluid w-100 d-block" style="width:100%;max-width:100%;height:auto;border-radius:6px;" src="native_merge_result.png" alt="Verified native CRM merge result with the surviving opportunity"></a>
+              <figcaption style="padding:15px 6px 1px;">
+                <h3 style="margin:0 0 8px;color:#FFFFFF;font-size:21px;line-height:1.25;">Verify the native merge result</h3>
+                <p style="margin:0;">Review the survivor, completed case state and retained decision history after Odoo merges the records.</p>
+              </figcaption>
+            </figure>
+          </div><div class="col-12 col-lg-6" style="padding:0 10px 20px;">
+            <figure style="margin:0;padding:14px;background-color:#10263E;border:1px solid #334861;border-radius:12px;">
+              <a class="d-block" href="merge_confirmation.png" aria-label="Open full-size Odoo capture: Final CRM merge confirmation requiring explicit acknowledgment"><img class="img-fluid w-100 d-block" style="width:100%;max-width:100%;height:auto;border-radius:6px;" src="merge_confirmation.png" alt="Final CRM merge confirmation requiring explicit acknowledgment"></a>
+              <figcaption style="padding:15px 6px 1px;">
+                <h3 style="margin:0 0 8px;color:#FFFFFF;font-size:21px;line-height:1.25;">Confirm only after review</h3>
+                <p style="margin:0;">A separate manager confirmation revalidates approval and source records before the native merge.</p>
+              </figcaption>
+            </figure>
+          </div><div class="col-12 col-lg-6" style="padding:0 10px 20px;">
+            <figure style="margin:0;padding:14px;background-color:#10263E;border:1px solid #334861;border-radius:12px;">
+              <a class="d-block" href="review_history.png" aria-label="Open full-size Odoo capture: Odoo duplicate review history showing decisions and merge audit events"><img class="img-fluid w-100 d-block" style="width:100%;max-width:100%;height:auto;border-radius:6px;" src="review_history.png" alt="Odoo duplicate review history showing decisions and merge audit events"></a>
+              <figcaption style="padding:15px 6px 1px;">
+                <h3 style="margin:0 0 8px;color:#FFFFFF;font-size:21px;line-height:1.25;">Keep a readable review history</h3>
+                <p style="margin:0;">Trace reviewer decisions, approval and verified merge outcome after CRM source consolidation.</p>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
-
-  <section class="gtdr-pad" aria-label="Review history and security" style="background:#F3F0E9;">
-    <div class="row align-items-center" style="max-width:1054px;margin:0 auto;"><div class="col-12 col-lg-5" style="padding:0 18px 18px 0;"><p class="gtdr-kicker">SECURITY &amp; AUDIT</p><h2>Keep the decision history.</h2><p>Validated review actions record the actor, time, decision reason and merge outcome. Events are protected from ordinary application edits; this is not a claim of protection against database administrators.</p><ul style="padding-left:21px;color:#536174;"><li>Review User and Manager roles.</li><li>CRM source permissions remain in force.</li><li>Same-company candidate pairs only.</li><li>Manager-only scan and merge actions.</li></ul></div><div class="col-12 col-lg-7" style="padding:0 0 18px 12px;"><figure class="gtdr-shot"><a href="review_history.png" aria-label="Open full-size case review history"><img src="review_history.png" alt="Genuine Odoo duplicate case review history with decision events"></a><figcaption>Review and merge events remain available after source consolidation.</figcaption></figure></div></div>
+  
+  <section aria-label="How it works" style="background-color:#F3F0E9;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">SIMPLICITY BY DESIGN</p>
+      <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">From Candidate Detection to Verified CRM Merge.</h2>
+      <div style="margin-top:28px;border-top:1px solid #CBB18A;padding-top:20px;">
+        <div class="row " style="margin:0;">
+          <div class="col-12 col-md-6 col-lg-3" style="padding:0 10px 20px;">
+            <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+              <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">STEP 01</p>
+              <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Scan CRM</h3>
+              <p style="margin:0;">A manager runs a bounded scan for the authorized company scope.</p>
+            </div>
+          </div><div class="col-12 col-md-6 col-lg-3" style="padding:0 10px 20px;">
+            <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+              <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">STEP 02</p>
+              <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Review Evidence</h3>
+              <p style="margin:0;">Inspect matched signals, score, source comparison and business conflicts.</p>
+            </div>
+          </div><div class="col-12 col-md-6 col-lg-3" style="padding:0 10px 20px;">
+            <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+              <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">STEP 03</p>
+              <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Decide Separately</h3>
+              <p style="margin:0;">Record Not Duplicate or approve merging with a required reason.</p>
+            </div>
+          </div><div class="col-12 col-md-6 col-lg-3" style="padding:0 10px 20px;">
+            <div class="h-100" style="padding:22px;background-color:#FFFFFF;border:1px solid #DDD6CA;border-radius:12px;">
+              <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">STEP 04</p>
+              <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Confirm Native Merge</h3>
+              <p style="margin:0;">Reconfirm explicitly. The server rechecks permissions and freshness before verifying Odoo&#8217;s native merge result.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
-
-  <section class="gtdr-pad" aria-label="Setup instructions" style="background:#fff;">
-    <div class="row" style="max-width:1054px;margin:0 auto;"><div class="col-12 col-lg-4" style="padding:0 20px 18px 0;"><p class="gtdr-kicker">GETTING STARTED</p><h2>Set up your review team.</h2><p><strong>Dependency:</strong> Odoo Community CRM (`crm`).</p><p><strong>Roles:</strong> Duplicate Review User and Duplicate Review Manager.</p><p><strong>Scanning:</strong> Manual company-scoped scan; scheduled scanning is disabled by default and configurable by an authorized administrator.</p><p><a href="../../documentation/USER_GUIDE.md" style="color:#805C27;font-weight:700;text-decoration:underline;">Read the customer guide</a></p></div><div class="col-12 col-lg-8" style="padding:0 0 18px 10px;"><ol style="margin:0;padding-left:23px;color:#536174;"><li style="padding:0 0 13px 5px;"><strong style="color:#172940;">Install the module.</strong> Add `gt_crm_duplicate_review` to an Odoo addons path, update Apps, and install CRM Duplicate Review.</li><li style="padding:0 0 13px 5px;"><strong style="color:#172940;">Assign roles.</strong> Give sales users Duplicate Review User; assign Duplicate Review Manager only to reviewers who need scan and decision actions.</li><li style="padding:0 0 13px 5px;"><strong style="color:#172940;">Open CRM → Duplicate Review.</strong> Use Dashboard or Review Queue. Company-less leads are excluded from automatic pairing.</li><li style="padding:0 0 13px 5px;"><strong style="color:#172940;">Run a bounded scan.</strong> A manager scans the authorized company. Continue partial scans as indicated in Scan History.</li><li style="padding:0 0 13px 5px;"><strong style="color:#172940;">Review before merging.</strong> Inspect source permissions, conflicts and freshness. Not Duplicate records remain unchanged; merges require approval and a separate explicit confirmation.</li></ol></div></div>
+  
+  <section aria-label="Business scenario" style="background-color:#FFFFFF;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <div class="row align-items-center" style="margin:0;">
+        <div class="col-12 col-lg-5" style="padding:0 10px 20px;">
+          <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">ILLUSTRATIVE SCENARIO</p>
+          <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">One Contact. Two Legitimate Deals.</h2>
+          <p style="margin:0 0 14px;max-width:430px;">Two opportunities have the same normalized email and phone, but one concerns a new product rollout and the other is an annual service renewal. Matching contact information is not enough to prove the deals are duplicates.</p>
+        </div><div class="col-12 col-lg-7" style="padding:0 10px 20px;">
+          <div style="padding:clamp(16px,3vw,28px);background-color:#F3F0E9;border:1px solid #DDD6CA;border-radius:12px;">
+            <div class="row " style="margin:0;">
+              <div class="col-6" style="padding:0 8px 16px;"><strong class="d-block" style="font-family:Georgia, 'Times New Roman', serif;font-size:clamp(23px,4vw,43px);font-weight:400;line-height:1.08;color:#172940;">95 / 100</strong><span style="font-size:14px;">Heuristic match score</span></div>
+              <div class="col-6" style="padding:0 8px 16px;"><strong class="d-block" style="font-family:Georgia, 'Times New Roman', serif;font-size:clamp(23px,4vw,43px);font-weight:400;line-height:1.08;color:#974439;">2 opportunities</strong><span style="font-size:14px;">Separate business requirements</span></div>
+            </div>
+            <div style="padding:14px 8px 0;border-top:1px solid #DDD6CA;">
+              <p style="margin:0 0 14px;"><strong style="color:#974439;">Review required &middot; conflicts shown</strong></p>
+              <p style="margin:0;">The reviewer can mark the pair Not Duplicate with a reason. The CRM records remain unchanged; no automatic merge occurs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
-
-  <section class="gtdr-pad" aria-label="Frequently asked questions" style="background:#F7F6F3;">
-    <div class="row" style="max-width:1054px;margin:0 auto;"><div class="col-12 col-lg-4" style="padding:0 20px 18px 0;"><p class="gtdr-kicker">FREQUENTLY ASKED QUESTIONS</p><h2>Good to know.</h2></div><div class="col-12 col-lg-8" style="padding:0 0 18px 10px;">
-      <div class="gtdr-faq"><h3>Does a high score prove the opportunities are duplicates?</h3><p>No. It is a heuristic ranking of match evidence. Review the commercial requirement and conflicts before deciding.</p></div>
-      <div class="gtdr-faq"><h3>Does the module merge automatically?</h3><p>No. An authorized manager must review, approve and separately confirm the native CRM merge.</p></div>
-      <div class="gtdr-faq"><h3>Can I mark two shared-contact opportunities as separate?</h3><p>Yes. A manager can record Not Duplicate with a reason. The source CRM records are not modified by that decision.</p></div>
-      <div class="gtdr-faq"><h3>What if a source record changes after approval?</h3><p>The approval becomes stale and the merge is blocked until the evidence is rechecked and approved again.</p></div>
-      <div class="gtdr-faq"><h3>Does this merge contacts or sales documents?</h3><p>No. The module reviews `crm.lead` leads and opportunities only; contact deduplication and accounting or sales-document reconciliation are outside scope.</p></div>
-      <div class="gtdr-faq"><h3>Does it grant users additional CRM access?</h3><p>No. Case visibility and actions continue to depend on access to both underlying CRM records and the company.</p></div>
-    </div></div>
+  
+  <section aria-label="Business benefits" style="background-color:#10263E;color:#D2DBE5;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <div class="row align-items-center" style="margin:0;">
+        <div class="col-12 col-lg-6" style="padding:0 10px 20px;">
+          <p style="margin:0 0 12px;color:#E4B875;font-size:12px;font-weight:700;letter-spacing:2px;">BUSINESS BENEFITS</p>
+          <h2 style="margin:0 0 22px;color:#FFFFFF;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">Protect Sales Context. Preserve Review History.</h2>
+          <p style="margin:0 0 14px;max-width:450px;">Give CRM teams an explainable way to find candidates, spot legitimate separate deals and control native merging.</p>
+        </div><div class="col-12 col-lg-6" style="padding:0 10px 20px;">
+          <ul class="list-unstyled" style="margin:0;padding:0;">
+            <li style="padding:12px 0;border-top:1px solid #41546A;color:#FFFFFF;"><span aria-hidden="true" style="margin-right:12px;color:#E4B875;">01</span> Reduce duplicate outreach to the same prospect.</li>
+            <li style="padding:12px 0;border-top:1px solid #41546A;color:#FFFFFF;"><span aria-hidden="true" style="margin-right:12px;color:#E4B875;">02</span> Make matching signals easy for reviewers to understand.</li>
+            <li style="padding:12px 0;border-top:1px solid #41546A;color:#FFFFFF;"><span aria-hidden="true" style="margin-right:12px;color:#E4B875;">03</span> Keep distinct opportunities separate when requirements differ.</li>
+            <li style="padding:12px 0;border-top:1px solid #41546A;color:#FFFFFF;"><span aria-hidden="true" style="margin-right:12px;color:#E4B875;">04</span> Recheck approvals when source records change.</li>
+            <li style="padding:12px 0;border-top:1px solid #41546A;color:#FFFFFF;"><span aria-hidden="true" style="margin-right:12px;color:#E4B875;">05</span> Retain a protected history of review decisions.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </section>
-
-  <footer class="gtdr-pad" aria-label="Golok Technology support" style="background:#14243A;color:#D9DFE6;text-align:center;border-top:5px solid #B78A43;">
-    <p style="margin:0 0 10px;color:#E2C58F;font-size:12px;font-weight:700;letter-spacing:2px;">GOLOK TECHNOLOGY</p><h2 style="color:#fff;">CRM Duplicate Review</h2><p style="max-width:700px;margin:0 auto 18px;">Thoughtful CRM tools for teams that want cleaner records and deliberate decisions.</p>
-    <p style="margin:0;"><a class="gtdr-cta" href="mailto:patelyash.gokul@gmail.com?subject=CRM%20Duplicate%20Review%20-%20Support">patelyash.gokul@gmail.com</a></p><p style="margin:18px 0 0;color:#C1C8D2;font-size:13px;">Odoo CRM duplicate review · USD $69 one-time · Odoo 20 Community</p>
-  </footer>
+  
+  <section aria-label="Installation and configuration" style="background-color:#FFFFFF;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <div class="row " style="margin:0;">
+        <div class="col-12 col-lg-4" style="padding:0 10px 20px;">
+          <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">INSTALLATION &amp; CONFIGURATION</p>
+          <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">Set up your review team.</h2>
+          <p style="margin:0 0 14px;"><strong>Odoo 20 Community</strong><br>CRM</p>
+          <p style="margin:0;"><a href="../../documentation/USER_GUIDE.md" style="color:#79531E;font-weight:700;text-decoration:underline;">Open the customer guide</a></p>
+        </div><div class="col-12 col-lg-8" style="padding:0 10px 20px;">
+          <ol style="margin:0;padding-left:23px;">
+            <li style="padding:0 0 14px 5px;"><strong style="color:#172940;">Install the add-on.</strong> Place gt_crm_duplicate_review on your addons path, restart Odoo, update the Apps list and install CRM Duplicate Review. The module depends on Community CRM.</li>
+            <li style="padding:0 0 14px 5px;"><strong style="color:#172940;">Assign review roles.</strong> Assign Duplicate Review User to permitted reviewers and Duplicate Review Manager only to users who need scan and decision actions. These groups do not grant extra CRM record access.</li>
+            <li style="padding:0 0 14px 5px;"><strong style="color:#172940;">Open the review workspace.</strong> Go to CRM &rarr; Duplicate Review &rarr; Dashboard or Review Queue. Confirm users can access both source CRM records and the company.</li>
+            <li style="padding:0 0 14px 5px;"><strong style="color:#172940;">Run a bounded scan.</strong> A manager scans one authorized company. If the scan reports partial progress, run it again to continue; company-less leads are not paired automatically.</li>
+            <li style="padding:0 0 14px 5px;"><strong style="color:#172940;">Review and resolve cases.</strong> Compare both opportunities. Mark Not Duplicate with a reason or approve a merge; final native merging requires a separate explicit confirmation.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <section aria-label="Frequently asked questions" style="background-color:#F7F6F3;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <div class="row " style="margin:0;">
+        <div class="col-12 col-lg-4" style="padding:0 10px 20px;">
+          <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">FREQUENTLY ASKED QUESTIONS</p>
+          <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">Good to know.</h2>
+        </div><div class="col-12 col-lg-8" style="padding:0 10px 20px;">
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">What does a match score mean?</h3>
+            <p style="margin:0;">It is a deterministic heuristic ranking of matching evidence, not a probability that records are the same customer or the same deal.</p>
+          </div>
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Does the module merge records automatically?</h3>
+            <p style="margin:0;">No. Matching only creates review suggestions. Managers must review, approve and separately confirm the native CRM merge.</p>
+          </div>
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Can two opportunities share a contact and still be distinct?</h3>
+            <p style="margin:0;">Yes. Separate projects, renewals or products may legitimately share customer and contact information. Review the opportunity details and use Not Duplicate with a reason when appropriate.</p>
+          </div>
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">What happens when source CRM data changes after approval?</h3>
+            <p style="margin:0;">The approval is marked stale and execution is blocked until evidence is rechecked and the case is approved again.</p>
+          </div>
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Does a score of 95 mean a 95% chance?</h3>
+            <p style="margin:0;">No. Scores are fixed heuristic rankings; they are not calibrated probabilities and never authorize a merge by themselves.</p>
+          </div>
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Can users see CRM records they could not access before?</h3>
+            <p style="margin:0;">No. Case searches, comparisons and dashboard counts are restricted by access to both underlying CRM records and the applicable company.</p>
+          </div>
+          <div style="padding:15px 0;border-top:1px solid #DDD6CA;">
+            <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Can the module merge contacts or sales documents?</h3>
+            <p style="margin:0;">No. The module reviews crm.lead records only; contact deduplication and accounting or sales-document reconciliation are outside scope.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <section aria-label="Golok Technology and support" style="background-color:#F3F0E9;color:#596477;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
+    <div style="max-width:1170px;margin:0 auto;">
+      <div class="text-center" style="max-width:760px;margin:0 auto;">
+        <p style="margin:0 0 12px;color:#79531E;font-size:12px;font-weight:700;letter-spacing:2px;">A SMARTER STANDARD FOR CRM REVIEW</p>
+        <h2 style="margin:0 0 22px;color:#172940;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(32px,4.4vw,54px);font-weight:400;line-height:1.08;">Make Every CRM Review More Deliberate.</h2>
+        <p style="margin:0 0 14px;font-size:18px;">Bring matching evidence, business conflicts and secure review decisions into one native CRM workspace.</p>
+        <div style="max-width:390px;margin:27px auto 0;padding-top:23px;border-top:1px solid #CBB18A;">
+          <h3 style="margin:0 0 8px;color:#172940;font-size:21px;line-height:1.25;">Golok Technology</h3>
+          <p style="margin:0 0 14px;">Thoughtful software for real business challenges.</p>
+          <p style="margin:0;"><a href="mailto:patelyash.gokul@gmail.com" style="color:#79531E;font-size:14px;font-weight:700;text-decoration:underline;">patelyash.gokul@gmail.com</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
