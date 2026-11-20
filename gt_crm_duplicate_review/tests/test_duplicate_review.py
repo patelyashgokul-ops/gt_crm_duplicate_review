@@ -1,5 +1,5 @@
 from odoo.tests import tagged, TransactionCase
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from unittest.mock import patch
 import logging
 import time
@@ -42,6 +42,62 @@ class TestDuplicateReview(TransactionCase):
         self.assertFalse(normalize_phone('5551234567'))
         self.assertFalse(normalize_phone('garbage'))
         self.assertEqual(normalize_phone('+1 650-253-0000'), '+16502530000')
+
+    def _candidate_case(self, lead_a, lead_b):
+        from ..models.matching import evaluate_pair
+        a, b = sorted((lead_a, lead_b), key=lambda lead: lead.id)
+        result = evaluate_pair(a, b)
+        self.assertTrue(result)
+        return self.Case.sudo().create({
+            'company_id': self.company.id, 'lead_a_id': a.id, 'lead_b_id': b.id,
+            'match_type': result['match_type'], 'match_score': result['match_score'],
+            'confidence_band': result['confidence_band'], 'matched_signals': result['matched_signals'],
+            'conflict_indicators': result['conflict_indicators'], 'shared_contact': result['shared_contact'],
+            'match_explanation': '; '.join(result['matched_signals']),
+            'source_fingerprint': self.Case._fingerprint(a.id, b.id, result['match_type'], result['fingerprint_key']),
+            'last_evaluated': fields.Datetime.now(),
+        })
+
+    def test_p3_not_duplicate_audited_and_sources_unchanged(self):
+        from odoo import fields
+        a = self._lead(name='Separate tender A', email_from='same@example.test', phone='+1 650-253-0000')
+        b = self._lead(name='Separate tender B', email_from='same@example.test', phone='+1 650-253-0000')
+        case = self._candidate_case(a, b).with_user(self.manager)
+        source_before = [(r.id, r.name, r.email_from, r.phone, r.active) for r in (a, b)]
+        case._decide_not_duplicate('separate_opportunities', 'Separate customer requirements reviewed.')
+        self.assertEqual(case.status, 'not_duplicate')
+        self.assertEqual(case.event_ids[-1].event_type, 'not_duplicate')
+        self.assertEqual([(r.id, r.name, r.email_from, r.phone, r.active) for r in (a, b)], source_before)
+        with self.assertRaises(AccessError):
+            case.write({'status': 'merged'})
+
+    def test_p3_native_merge_requires_ack_and_verifies_survivor(self):
+        from odoo import fields
+        a = self._lead(name='Approved opportunity A', type='opportunity', email_from='merge@example.test',
+                       phone='+1 650-253-0000', expected_revenue=10000, probability=20)
+        b = self._lead(name='Approved opportunity B', type='opportunity', email_from='merge@example.test',
+                       mobile='+1 650-253-0000', expected_revenue=20000, probability=60)
+        case = self._candidate_case(a, b).with_user(self.manager)
+        case._approve_merge('Reviewed same active commercial requirement.')
+        self.assertEqual(case.status, 'merge_approved')
+        self.assertTrue(a.exists() and b.exists(), 'Approval must not merge the CRM records')
+        with self.assertRaises(ValidationError):
+            case._execute_approved_merge(False)
+        action = case._execute_approved_merge(True)
+        self.assertEqual(action['res_model'], 'crm.lead')
+        self.assertEqual(case.status, 'merged')
+        self.assertTrue(case.merge_survivor_id.exists())
+        self.assertEqual(set(case.event_ids.mapped('event_type')) & {'merged'}, {'merged'})
+        self.assertNotEqual(case.merge_survivor_id.expected_revenue, 30000,
+                            'Native merge must not sum expected revenue')
+        self.assertEqual(len(self.Lead.sudo().browse([a.id, b.id]).exists()), 1)
+
+    def test_p3_unapproved_merge_is_rejected(self):
+        a = self._lead(email_from='unapproved@example.test')
+        b = self._lead(email_from='unapproved@example.test')
+        case = self._candidate_case(a, b).with_user(self.manager)
+        with self.assertRaises(UserError):
+            case._execute_approved_merge(True)
 
     def test_exact_match_and_repeat(self):
         a = self._lead(email_from='First@Example.com', phone='+1 650-253-0000')
