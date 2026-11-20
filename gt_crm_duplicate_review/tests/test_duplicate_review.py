@@ -481,8 +481,9 @@ class TestDuplicateReview(TransactionCase):
                 'event_type': 'merged', 'actor_id': self.manager.id,
                 'event_at': fields.Datetime.now(),
             })
-        with self.assertRaises(AccessError):
-            model.load(['id', 'status'], [[str(case.id), 'merged']])
+        import_result = model.load(['id', 'status'], [[str(case.id), 'merged']])
+        self.assertTrue(import_result.get('messages'), 'An import attempt must report the denied/invalid protected write.')
+        self.assertEqual(case.sudo().status, 'pending')
 
     def test_near_phone_is_disabled(self):
         first = self._lead(name='Same Contact', phone='+1 650-253-0000')
