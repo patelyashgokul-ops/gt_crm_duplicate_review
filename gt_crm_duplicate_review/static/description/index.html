@@ -4,7 +4,8 @@
     /* Scoped Bootstrap grid fallback: the Apps Store provides Bootstrap; this keeps previews usable without it. */
     #gt-crm-duplicate-review,#gt-crm-duplicate-review *{box-sizing:border-box}
     #gt-crm-duplicate-review .row{display:flex;flex-wrap:wrap}
-    #gt-crm-duplicate-review [class*="col-"]{position:relative;box-sizing:border-box;width:100%;min-height:1px}
+    #gt-crm-duplicate-review [class*="col-"]{position:relative;box-sizing:border-box;width:100%;min-width:0;min-height:1px}
+    #gt-crm-duplicate-review img{max-width:100%;height:auto}
     #gt-crm-duplicate-review .col-4{flex:0 0 33.333333%;max-width:33.333333%}
     #gt-crm-duplicate-review .col-6{flex:0 0 50%;max-width:50%}
     #gt-crm-duplicate-review .col-12{flex:0 0 100%;max-width:100%}
@@ -27,6 +28,12 @@
       #gt-crm-duplicate-review .col-lg-7{flex:0 0 58.333333%;max-width:58.333333%}
       #gt-crm-duplicate-review .col-lg-8{flex:0 0 66.666667%;max-width:66.666667%}
     }
+    @media(max-width:767px){
+      #gt-crm-duplicate-review .row{width:100%}
+      #gt-crm-duplicate-review [class*="col-"]{flex-basis:100%;width:100%;max-width:100%}
+      #gt-crm-duplicate-review h1{max-width:100%;font-size:clamp(32px,9vw,38px);white-space:normal!important;overflow-wrap:anywhere}
+      #gt-crm-duplicate-review p,#gt-crm-duplicate-review figure{max-width:100%;overflow-wrap:anywhere}
+    }
   </style>
   <section aria-label="Product overview" style="background-color:#0C192A;color:#D2DBE5;padding:clamp(42px,6vw,92px) clamp(16px,4vw,56px);">
     <div style="max-width:1170px;margin:0 auto;">
@@ -34,7 +41,7 @@
         <div class="col-12 col-lg-5" style="padding:0 12px 24px;">
           <p style="margin:0 0 28px;color:#FFFFFF;font-size:13px;font-weight:700;letter-spacing:2px;"><span style="padding-bottom:8px;border-bottom:2px solid #D5A85F;">GOLOK TECHNOLOGY</span></p>
           <p style="margin:0 0 12px;color:#E4B875;font-size:12px;font-weight:700;letter-spacing:2px;">CRM DUPLICATE REVIEW</p>
-          <h1 style="margin:0 0 16px;color:#FFFFFF;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(38px,4.6vw,60px);font-weight:400;line-height:1.03;">CRM Duplicate Review</h1>
+          <h1 style="margin:0 0 16px;color:#FFFFFF;font-family:Georgia, 'Times New Roman', serif;font-size:clamp(38px,4.6vw,60px);font-weight:400;line-height:1.03;">CRM Duplicate<br/>Review</h1>
           <p style="margin:0 0 14px;color:#FFFFFF;font-size:19px;line-height:1.4;"><strong>Find similar records. Review conflicts. Merge only after approval.</strong></p>
           <p style="margin:0 0 14px;max-width:430px;">Find potentially duplicate CRM leads and opportunities with explainable matching evidence, business-context warnings, and a manager-controlled native merge workflow.</p>
           <p style="margin:20px 0 0;">
