@@ -111,6 +111,7 @@
     <record id="action_duplicate_scan" model="ir.actions.server">
         <field name="name">Scan CRM Duplicates</field>
         <field name="model_id" ref="model_gt_crm_duplicate_case"/>
+        <field name="group_ids" eval="[(6, 0, [ref('group_duplicate_review_manager')])]"/>
         <field name="state">code</field>
         <field name="code">action = env['gt.crm.duplicate.case'].action_scan()</field>
     </record>

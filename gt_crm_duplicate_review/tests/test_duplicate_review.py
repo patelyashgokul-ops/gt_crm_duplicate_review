@@ -749,3 +749,26 @@ class TestDuplicateReview(TransactionCase):
         with self.assertRaises(AccessError):
             case.with_user(review_user)._approve_merge('A reviewer cannot approve this case.')
         self.assertEqual(case.status, 'not_duplicate')
+
+    def test_p5_manual_scan_server_action_is_manager_only_and_executable(self):
+        scan_action = self.env.ref('gt_crm_duplicate_review.action_duplicate_scan')
+        skip_action = self.env.ref('gt_crm_duplicate_review.action_duplicate_skip_group')
+        manager_group = self.env.ref('gt_crm_duplicate_review.group_duplicate_review_manager')
+        review_user = self.env['res.users'].create({
+            'name': 'Scan Action Review User', 'login': 'scan_action_review_test',
+            'group_ids': [(6, 0, [
+                self.env.ref('base.group_user').id,
+                self.env.ref('sales_team.group_sale_salesman').id,
+                self.env.ref('gt_crm_duplicate_review.group_duplicate_review_user').id,
+            ])],
+        })
+        self.assertIn(manager_group, scan_action.group_ids)
+        self.assertIn(manager_group, skip_action.group_ids)
+
+        with self.assertRaises(AccessError):
+            scan_action.with_user(review_user).run()
+        with self.assertRaises(AccessError):
+            skip_action.with_user(review_user).run()
+
+        result = scan_action.with_user(self.manager).with_company(self.company).run()
+        self.assertEqual(result.get('type'), 'ir.actions.client')
